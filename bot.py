@@ -126,32 +126,6 @@ def main():
     print("Sending categorized intelligence report to LINE...")
     send_line_message(summary_text)
     
-    # 4. Save to history
-    save_to_history(summary_text)
-    
-    print("Process completed.")
-
-if __name__ == "__main__":
-    main()
-news from Macro and Crypto sources
-    news_items = get_aggregated_news(RSS_FEEDS)
-    
-    if not news_items:
-        print("No news items retrieved from any source. Exiting.")
-        return
-        
-    # 2. Categorize and Analyze with Gemini
-    print(f"Analyzing {len(news_items)} news items for market impact...")
-    summary_text = summarize_market_news(news_items)
-    
-    if not summary_text:
-        print("Failed to generate intelligence report. Exiting.")
-        return
-        
-    # 3. Send to LINE
-    print("Sending categorized intelligence report to LINE...")
-    send_line_message(summary_text)
-    
     print("Process completed.")
 
 if __name__ == "__main__":
