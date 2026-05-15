@@ -81,7 +81,7 @@ def summarize_market_news(news_items):
         prompt += f"Source: {item['source']}\nTitle: {item['title']}\nSummary: {item['summary']}\n\n"
         
     response = client.models.generate_content(
-        model='gemini-flash-latest',
+        model='gemini-1.5-flash-lite',
         contents=prompt
     )
     return response.text
