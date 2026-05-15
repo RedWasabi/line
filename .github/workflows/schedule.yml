@@ -28,36 +28,17 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Sync and Run Market Analyst
+      - name: Run Market Analyst
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LINE_ACCESS_TOKEN: ${{ secrets.LINE_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
-        run: |
-          # 1. Pull latest changes before running to ensure bot sees latest history
-          git pull origin master
-          
-          # 2. Run the bot
-          python bot.py
+        run: python bot.py
 
       - name: Commit and push changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # 3. Handle push conflicts by resetting to latest remote and re-committing
-          git fetch origin master
-          git reset --mixed origin/master
-          
-          if [ -f news_history.json ]; then
-            git add news_history.json
-            # Only commit if there are actual changes
-            if ! git diff --cached --quiet; then
-              git commit -m "Update news history [skip ci]"
-              git push origin HEAD:master
-            else
-              echo "No new history to commit."
-            fi
-          else
-            echo "news_history.json not found, nothing to commit."
-          fi
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update news history [skip ci]"
+          file_pattern: 'news_history.json'
+          branch: master
+          push_options: '--force'
