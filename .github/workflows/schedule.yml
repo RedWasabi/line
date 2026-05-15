@@ -39,7 +39,9 @@ jobs:
           git config --local user.name "github-actions[bot]"
           if [ -f news_history.json ]; then
             git add news_history.json
-            git commit -m "Update news history [skip ci]" && git push || echo "No changes to commit or push"
+            git commit -m "Update news history [skip ci]" || echo "No changes to commit"
+            git pull --rebase origin master
+            git push
           else
             echo "news_history.json not found, nothing to commit."
           fi
