@@ -1,7 +1,5 @@
 import os
 import time
-import json
-from datetime import datetime
 import feedparser
 from google import genai
 from linebot import LineBotApi
@@ -25,28 +23,6 @@ RSS_FEEDS = [
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
 LINE_USER_ID = os.environ.get("LINE_USER_ID")
-
-def save_to_history(summary_text, filename="news_history.json"):
-    """Saves the summary to a JSON history file."""
-    history_entry = {
-        "timestamp": datetime.now().isoformat(),
-        "report": summary_text
-    }
-    
-    try:
-        if os.path.exists(filename):
-            with open(filename, "r", encoding="utf-8") as f:
-                history = json.load(f)
-        else:
-            history = []
-            
-        history.append(history_entry)
-        
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(history, f, ensure_ascii=False, indent=4)
-        print(f"Report saved to {filename}")
-    except Exception as e:
-        print(f"Error saving history: {e}")
 
 def get_aggregated_news(urls, limit_per_source=8):
     """Scrapes news from multiple RSS URLs with improved error handling."""
@@ -152,6 +128,29 @@ def main():
     
     # 4. Save to history
     save_to_history(summary_text)
+    
+    print("Process completed.")
+
+if __name__ == "__main__":
+    main()
+news from Macro and Crypto sources
+    news_items = get_aggregated_news(RSS_FEEDS)
+    
+    if not news_items:
+        print("No news items retrieved from any source. Exiting.")
+        return
+        
+    # 2. Categorize and Analyze with Gemini
+    print(f"Analyzing {len(news_items)} news items for market impact...")
+    summary_text = summarize_market_news(news_items)
+    
+    if not summary_text:
+        print("Failed to generate intelligence report. Exiting.")
+        return
+        
+    # 3. Send to LINE
+    print("Sending categorized intelligence report to LINE...")
+    send_line_message(summary_text)
     
     print("Process completed.")
 

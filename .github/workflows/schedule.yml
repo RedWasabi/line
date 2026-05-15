@@ -2,11 +2,8 @@ name: Daily Crypto Intelligence Update
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Runs every 5 minutes for testing
+    - cron: '0 0 * * *' # Runs at 00:00 UTC every day
   workflow_dispatch: # Allows manual trigger from GitHub UI
-
-permissions:
-  contents: write
 
 jobs:
   run-analyst:
@@ -15,8 +12,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,11 +29,3 @@ jobs:
           LINE_ACCESS_TOKEN: ${{ secrets.LINE_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
         run: python bot.py
-
-      - name: Commit and push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update news history [skip ci]"
-          file_pattern: 'news_history.json'
-          branch: master
-          push_options: '--force'
