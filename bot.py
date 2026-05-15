@@ -1,7 +1,7 @@
 import os
 import time
 import feedparser
-from google import genai
+from groq import Groq
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
 from linebot.exceptions import LineBotApiError
@@ -20,7 +20,7 @@ RSS_FEEDS = [
 ]
 
 # Load environment variables
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
 LINE_USER_ID = os.environ.get("LINE_USER_ID")
 
@@ -54,12 +54,12 @@ def get_aggregated_news(urls, limit_per_source=8):
     before_sleep=lambda retry_state: print(f"API busy or error. Retrying in {retry_state.next_action.sleep} seconds... (Attempt {retry_state.attempt_number})")
 )
 def summarize_market_news(news_items):
-    """Summarizes market-moving news using Gemini with strict categorization and Thai output."""
-    if not GEMINI_API_KEY:
-        print("Error: GEMINI_API_KEY environment variable is not set.")
+    """Summarizes market-moving news using Groq with strict categorization and Thai output."""
+    if not GROQ_API_KEY:
+        print("Error: GROQ_API_KEY environment variable is not set.")
         return None
     
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = Groq(api_key=GROQ_API_KEY)
     
     # Highly structured prompt for Categorized Analysis
     prompt = (
@@ -80,11 +80,16 @@ def summarize_market_news(news_items):
     for item in news_items:
         prompt += f"Source: {item['source']}\nTitle: {item['title']}\nSummary: {item['summary']}\n\n"
         
-    response = client.models.generate_content(
-        model='gemini-1.5-flash-lite',
-        contents=prompt
+    completion = client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[
+            {"role": "system", "content": "You are a professional market analyst."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.5,
+        max_tokens=2048,
     )
-    return response.text
+    return completion.choices[0].message.content
 
 def send_line_message(text):
     """Sends the summarized text to LINE."""
