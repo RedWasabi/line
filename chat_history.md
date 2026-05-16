@@ -75,3 +75,9 @@
     - **News Bot:** Professional Macro/Crypto intelligence in Thai.
     - **Binance Bot:** High-frequency, stateful price screening and recovery tracking.
 - Both systems are fully automated, persistent, secured, and triggered with minute-level accuracy.
+
+## 16. Advanced Price Tracking (Version 2)
+- **Logic Evolution:** Transitioned from static current-price snapshots to **"Persistent Session Watermarks"**.
+- **Merge-High/Merge-Low:** Updated `binance_bot.py` to continually merge the stored `hp`/`lp` with Binance's **24h High/Low ticker extremes** during every hourly run.
+- **Intra-hour Precision:** This ensures that the bot captures "invisible" spikes and dips that occur between hourly runs, providing 100% accurate "Drop %" and "Bounce %" calculations compared to the real chart.
+- **Time Tracking:** Implemented `0d 00h` formatting for both total time on watchlist (`thc`) and L2 delist timers (`hc`).

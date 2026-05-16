@@ -10,10 +10,11 @@
     - **External Trigger**: Migrated to `repository_dispatch` (type: `trigger-news`) for precise scheduling.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
+    - **Version 2 Tracking**: Uses **Persistent Session Watermarks** (merging session extremes with 24h ticker highs/lows) to capture intra-hour spikes and dips.
     - **Transition Logic**: L1 -> L2 (15% reversal), L2 -> L1 (20% recovery), L2 Timeout (72h delist).
-    - **Reporting**: USD Volume formatting (M/B) and separated sections.
-    - **Independent Channel**: Now uses `BINANCE_LINE_ACCESS_TOKEN`.
-    - **External Trigger**: Migrated to `repository_dispatch` (type: `trigger-binance`) for hourly precision.
+    - **Reporting**: USD Volume formatting (M/B), `0d 00h` time tracking for total duration (`thc`) and delist countdowns (`hc`).
+    - **Independent Channel**: Uses `BINANCE_LINE_ACCESS_TOKEN`.
+    - **External Trigger**: `repository_dispatch` (type: `trigger-binance`) for hourly precision.
 3.  **Infrastructure**:
     - GitHub Gist for persistent state.
     - `data-api.binance.vision` for reliable connectivity.
