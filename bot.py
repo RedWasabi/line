@@ -1,10 +1,8 @@
 import os
 import time
 import feedparser
+import requests
 from groq import Groq
-from linebot import LineBotApi
-from linebot.models import TextSendMessage
-from linebot.exceptions import LineBotApiError
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -21,8 +19,8 @@ RSS_FEEDS = [
 
 # Load environment variables
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-NEWS_LINE_ACCESS_TOKEN = os.environ.get("NEWS_LINE_ACCESS_TOKEN")
-NEWS_LINE_USER_ID = os.environ.get("NEWS_LINE_USER_ID")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 def get_aggregated_news(urls, limit_per_source=8):
     """Scrapes news from multiple RSS URLs with improved error handling."""
@@ -91,22 +89,28 @@ def summarize_market_news(news_items):
     )
     return completion.choices[0].message.content
 
-def send_line_message(text):
-    """Sends the summarized text to LINE."""
-    if not NEWS_LINE_ACCESS_TOKEN or not NEWS_LINE_USER_ID:
-        print("Error: NEWS_LINE_ACCESS_TOKEN or NEWS_LINE_USER_ID environment variable is not set.")
+def send_telegram_message(text):
+    """Sends the summarized text to Telegram."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Error: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variable is not set.")
         return False
         
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": text,
+        "parse_mode": "HTML"
+    }
     try:
-        line_bot_api = LineBotApi(NEWS_LINE_ACCESS_TOKEN)
-        line_bot_api.push_message(NEWS_LINE_USER_ID, TextSendMessage(text=text))
-        print("Categorized market analysis sent successfully via LINE.")
-        return True
-    except LineBotApiError as e:
-        print(f"Line Bot API Error: {e.status_code} {e.error.message}")
-        return False
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print("Categorized market analysis sent successfully via Telegram.")
+            return True
+        else:
+            print(f"Telegram API Error: {response.status_code} {response.text}")
+            return False
     except Exception as e:
-        print(f"Error sending LINE message: {e}")
+        print(f"Error sending Telegram message: {e}")
         return False
 
 def main():
@@ -127,9 +131,9 @@ def main():
         print("Failed to generate intelligence report. Exiting.")
         return
         
-    # 3. Send to LINE
-    print("Sending categorized intelligence report to LINE...")
-    send_line_message(summary_text)
+    # 3. Send to Telegram
+    print("Sending categorized intelligence report to Telegram...")
+    send_telegram_message(summary_text)
     
     print("Process completed.")
 

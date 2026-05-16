@@ -1,8 +1,6 @@
 import os
 import json
 import requests
-from linebot import LineBotApi
-from linebot.models import TextSendMessage
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -11,8 +9,8 @@ load_dotenv()
 # Configuration
 GIST_ID = os.environ.get("GIST_ID")
 GH_PAT = os.environ.get("GH_PAT")
-BINANCE_LINE_ACCESS_TOKEN = os.environ.get("BINANCE_LINE_ACCESS_TOKEN")
-BINANCE_LINE_USER_ID = os.environ.get("BINANCE_LINE_USER_ID")
+BINANCE_TELEGRAM_BOT_TOKEN = os.environ.get("BINANCE_TELEGRAM_BOT_TOKEN")
+BINANCE_TELEGRAM_CHAT_ID = os.environ.get("BINANCE_TELEGRAM_CHAT_ID")
 
 # Use data-api.binance.vision (Official Public Data Mirror) to bypass US regional blocks on GitHub runners
 BINANCE_API_URL = "https://data-api.binance.vision/api/v3/ticker/24hr"
@@ -81,17 +79,24 @@ def get_binance_tickers():
         print(f"Error fetching Binance data: {e}")
         return []
 
-def send_line_message(text):
-    """Sends the report to LINE."""
-    if not BINANCE_LINE_ACCESS_TOKEN or not BINANCE_LINE_USER_ID:
-        print("LINE credentials not set.")
+def send_telegram_message(text):
+    """Sends the report to Telegram."""
+    if not BINANCE_TELEGRAM_BOT_TOKEN or not BINANCE_TELEGRAM_CHAT_ID:
+        print("Telegram credentials not set.")
         return
+    url = f"https://api.telegram.org/bot{BINANCE_TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": BINANCE_TELEGRAM_CHAT_ID,
+        "text": text
+    }
     try:
-        line_bot_api = LineBotApi(BINANCE_LINE_ACCESS_TOKEN)
-        line_bot_api.push_message(BINANCE_LINE_USER_ID, TextSendMessage(text=text))
-        print("Binance report sent to LINE.")
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print("Binance report sent to Telegram.")
+        else:
+            print(f"Telegram API Error: {response.status_code} {response.text}")
     except Exception as e:
-        print(f"Error sending LINE message: {e}")
+        print(f"Error sending Telegram message: {e}")
 
 def format_usd(value):
     """Formats large USD values into readable strings (e.g., $1.2M, $500K)."""
@@ -273,7 +278,7 @@ def main():
             has_content = True
 
     if has_content:
-        send_line_message("\n".join(final_report))
+        send_telegram_message("\n".join(final_report))
     else:
         print("No active coins to report.")
 
