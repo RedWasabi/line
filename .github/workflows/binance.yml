@@ -31,4 +31,5 @@ jobs:
           GIST_ID: ${{ secrets.GIST_ID }}
           GH_PAT: ${{ secrets.GH_PAT }}
           BINANCE_LINE_ACCESS_TOKEN: ${{ secrets.BINANCE_LINE_ACCESS_TOKEN }}
-          BINANCE_LINE_USER_ID: ${{ secrets.BINANCE_LINE_USER_ID }}        run: python binance_bot.py
+          BINANCE_LINE_USER_ID: ${{ secrets.BINANCE_LINE_USER_ID }}
+        run: python binance_bot.py
