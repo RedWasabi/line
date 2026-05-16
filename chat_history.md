@@ -80,4 +80,13 @@
 - **Logic Evolution:** Transitioned from static current-price snapshots to **"Persistent Session Watermarks"**.
 - **Merge-High/Merge-Low:** Updated `binance_bot.py` to continually merge the stored `hp`/`lp` with Binance's **24h High/Low ticker extremes** during every hourly run.
 - **Intra-hour Precision:** This ensures that the bot captures "invisible" spikes and dips that occur between hourly runs, providing 100% accurate "Drop %" and "Bounce %" calculations compared to the real chart.
-- **Time Tracking:** Implemented `0d 00h` formatting for both total time on watchlist (`thc`) and L2 delist timers (`hc`).
+- Time Tracking: Implemented 0d 00h formatting for both total time on watchlist (thc) and L2 delist timers (hc).
+
+## 17. Telegram Migration & UI Enhancement
+- **Platform Pivot:** Migrated from LINE to **Telegram Bot API** to bypass the 300-message monthly limit and achieve unlimited free notifications.
+- **Workflow Secret Mapping:** Updated GitHub Action YAML files to map new `TELEGRAM_` and `BINANCE_TELEGRAM_` secrets, ensuring secure delivery in the cloud.
+- **High-Fidelity UI:** Implemented **HTML Rich-Text formatting**:
+    - **Bold Headers** for better visual hierarchy.
+    - **Monospaced (Fixed-Width) Fonts** via `<code>` tags for prices to ensure numerical alignment.
+    - **Italicized Insights** for sentiment and metadata.
+- **Handshake Protocol:** Documented the requirement for the user to initiate a `/start` command with each bot to enable message delivery.
