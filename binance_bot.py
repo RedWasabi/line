@@ -87,7 +87,8 @@ def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{BINANCE_TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": BINANCE_TELEGRAM_CHAT_ID,
-        "text": text
+        "text": text,
+        "parse_mode": "HTML"
     }
     try:
         response = requests.post(url, json=payload)
@@ -202,7 +203,11 @@ def main():
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
             else:
                 reports["gainer_l1"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | HP: {coin['hp']:,.4f}\n  Inc: {ip:+.2f}% | Drop: {dh:.2f}%\n  Vol: {format_usd(vol_usd)} | Time: {thc_str}"
+                    f"<b>• {symbol}</b>\n"
+                    f"  Price: <code>{curr_price:,.4f}</code>\n"
+                    f"  ST: <code>{coin['st']:,.4f}</code> | HP: <code>{coin['hp']:,.4f}</code>\n"
+                    f"  Inc: <b>{ip:+.2f}%</b> | Drop: <b>{dh:.2f}%</b>\n"
+                    f"  Vol: <i>{format_usd(vol_usd)}</i> | Time: {thc_str}"
                 )
 
         elif layer == "gainer_l2":
@@ -221,7 +226,11 @@ def main():
             else:
                 delist_str = format_time(coin['hc'])
                 reports["gainer_l2"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  LP: {coin['lp']:,.4f}\n  Bounce: {bp:+.2f}% | Time: {thc_str} | Delist: {delist_str}"
+                    f"<b>• {symbol}</b>\n"
+                    f"  Price: <code>{curr_price:,.4f}</code>\n"
+                    f"  LP: <code>{coin['lp']:,.4f}</code>\n"
+                    f"  Bounce: <b>{bp:+.2f}%</b> | Time: {thc_str}\n"
+                    f"  Delist in: <i>{delist_str}</i>"
                 )
 
         elif layer == "loser_l1":
@@ -236,7 +245,11 @@ def main():
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
             else:
                 reports["loser_l1"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | LP: {coin['lp']:,.4f}\n  Dec: {dp:.2f}% | Bounce: {bh:.2f}%\n  Vol: {format_usd(vol_usd)} | Time: {thc_str}"
+                    f"<b>• {symbol}</b>\n"
+                    f"  Price: <code>{curr_price:,.4f}</code>\n"
+                    f"  ST: <code>{coin['st']:,.4f}</code> | LP: <code>{coin['lp']:,.4f}</code>\n"
+                    f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
+                    f"  Vol: <i>{format_usd(vol_usd)}</i> | Time: {thc_str}"
                 )
 
         elif layer == "loser_l2":
@@ -255,19 +268,23 @@ def main():
             else:
                 delist_str = format_time(coin['hc'])
                 reports["loser_l2"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  HP: {coin['hp']:,.4f}\n  Drop: {dropp:.2f}% | Time: {thc_str} | Delist: {delist_str}"
+                    f"<b>• {symbol}</b>\n"
+                    f"  Price: <code>{curr_price:,.4f}</code>\n"
+                    f"  HP: <code>{coin['hp']:,.4f}</code>\n"
+                    f"  Drop: <b>{dropp:.2f}%</b> | Time: {thc_str}\n"
+                    f"  Delist in: <i>{delist_str}</i>"
                 )
         
         new_state[symbol] = coin
 
-    # 5. Format & Send LINE Message
-    final_report = ["📊 Binance Screening Report"]
+    # 5. Format & Send Telegram Message
+    final_report = ["📊 <b>Binance Screening Report</b>"]
     
     sections = [
-        ("🔥 Gainer (L1 - Momentum)", "gainer_l1"),
-        ("🏥 Gainer L2 (Recovery)", "gainer_l2"),
-        ("🩸 Loser (L1 - Bottoming)", "loser_l1"),
-        ("📉 Loser L2 (Dead Cat)", "loser_l2")
+        ("🔥 <b>Gainer (L1 - Momentum)</b>", "gainer_l1"),
+        ("🏥 <b>Gainer L2 (Recovery)</b>", "gainer_l2"),
+        ("🩸 <b>Loser (L1 - Bottoming)</b>", "loser_l1"),
+        ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
     ]
     
     has_content = False
