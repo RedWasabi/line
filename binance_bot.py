@@ -186,9 +186,9 @@ def main():
         
         # Transition Logic
         if layer == "gainer_l1":
-            # Update HP
-            if curr_price > coin['hp']:
-                coin['hp'] = curr_price
+            # Update Session High (Merge stored HP with Ticker 24h High)
+            ticker_high = float(ticker['highPrice'])
+            coin['hp'] = max(coin['hp'], ticker_high)
             
             dh = (coin['hp'] - curr_price) / coin['hp'] * 100
             ip = (curr_price - coin['st']) / coin['st'] * 100
@@ -202,8 +202,9 @@ def main():
 
         elif layer == "gainer_l2":
             coin['hc'] += 1
-            if curr_price < coin['lp']:
-                coin['lp'] = curr_price
+            # Update Session Low (Merge stored LP with Ticker 24h Low)
+            ticker_low = float(ticker['lowPrice'])
+            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, ticker_low)
             
             bp = (curr_price - coin['lp']) / coin['lp'] * 100
             
@@ -219,8 +220,9 @@ def main():
                 )
 
         elif layer == "loser_l1":
-            if curr_price < coin['lp']:
-                coin['lp'] = curr_price
+            # Update Session Low (Merge stored LP with Ticker 24h Low)
+            ticker_low = float(ticker['lowPrice'])
+            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, ticker_low)
                 
             bh = (curr_price - coin['lp']) / coin['lp'] * 100
             dp = (coin['st'] - curr_price) / coin['st'] * 100
@@ -234,8 +236,9 @@ def main():
 
         elif layer == "loser_l2":
             coin['hc'] += 1
-            if curr_price > coin['hp']:
-                coin['hp'] = curr_price
+            # Update Session High (Merge stored HP with Ticker 24h High)
+            ticker_high = float(ticker['highPrice'])
+            coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, ticker_high)
             
             dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
             
