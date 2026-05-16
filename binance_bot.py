@@ -103,11 +103,23 @@ def format_usd(value):
         return f"${value / 1_000:.2f}K"
     return f"${value:.2f}"
 
+def format_time(hours):
+    """Formats hours into '0d 00h' strings."""
+    d = hours // 24
+    h = hours % 24
+    return f"{d}d {h:02d}h"
+
 def main():
     print("Starting Multi-Layer Binance Screening Bot...")
     
     # 1. Load existing state
     state = load_state()
+    
+    # Migration & Global Increment: Initialize 'thc' if missing, then increment for all existing coins
+    for symbol in state:
+        if 'thc' not in state[symbol]:
+            state[symbol]['thc'] = state[symbol].get('hc', 0)
+        state[symbol]['thc'] += 1
     
     # 2. Fetch fresh Binance data
     tickers = get_binance_tickers()
@@ -134,7 +146,8 @@ def main():
                 "st": curr_price,
                 "hp": curr_price,
                 "lp": None,
-                "hc": 0
+                "hc": 0,
+                "thc": 0
             }
             print(f"Added {symbol} to Gainer L1")
 
@@ -147,7 +160,8 @@ def main():
                 "st": curr_price,
                 "lp": curr_price,
                 "hp": None,
-                "hc": 0
+                "hc": 0,
+                "thc": 0
             }
             print(f"Added {symbol} to Loser L1")
 
@@ -168,6 +182,7 @@ def main():
         curr_price = float(ticker['lastPrice'])
         vol_usd = float(ticker['quoteVolume'])
         layer = coin['layer']
+        thc_str = format_time(coin['thc'])
         
         # Transition Logic
         if layer == "gainer_l1":
@@ -182,7 +197,7 @@ def main():
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
             else:
                 reports["gainer_l1"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | HP: {coin['hp']:,.4f}\n  Inc: {ip:+.2f}% | Drop: {dh:.2f}%\n  Vol: {format_usd(vol_usd)}"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | HP: {coin['hp']:,.4f}\n  Inc: {ip:+.2f}% | Drop: {dh:.2f}%\n  Vol: {format_usd(vol_usd)} | Time: {thc_str}"
                 )
 
         elif layer == "gainer_l2":
@@ -199,7 +214,7 @@ def main():
                 continue 
             else:
                 reports["gainer_l2"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  LP: {coin['lp']:,.4f}\n  Bounce: {bp:+.2f}% | HC: {coin['hc']}h"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  LP: {coin['lp']:,.4f}\n  Bounce: {bp:+.2f}% | Time: {thc_str}"
                 )
 
         elif layer == "loser_l1":
@@ -213,7 +228,7 @@ def main():
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
             else:
                 reports["loser_l1"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | LP: {coin['lp']:,.4f}\n  Dec: {dp:.2f}% | Bounce: {bh:.2f}%\n  Vol: {format_usd(vol_usd)}"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | LP: {coin['lp']:,.4f}\n  Dec: {dp:.2f}% | Bounce: {bh:.2f}%\n  Vol: {format_usd(vol_usd)} | Time: {thc_str}"
                 )
 
         elif layer == "loser_l2":
@@ -230,7 +245,7 @@ def main():
                 continue
             else:
                 reports["loser_l2"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  HP: {coin['hp']:,.4f}\n  Drop: {dropp:.2f}% | HC: {coin['hc']}h"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  HP: {coin['hp']:,.4f}\n  Drop: {dropp:.2f}% | Time: {thc_str}"
                 )
         
         new_state[symbol] = coin
