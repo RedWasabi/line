@@ -113,7 +113,8 @@ def main():
     # 3. Process Watchlist
     new_watchlist = {}
     delisted_coins = []
-    report_lines = ["📊 Binance Hourly Watchlist Report"]
+    gainers_lines = ["\n🚀 TOP GAINERS"]
+    losers_lines = ["\n🔻 TOP LOSERS"]
     
     # Combine existing watchlist symbols and new top 10s
     all_monitored_symbols = set(watchlist.keys()) | {t['symbol'] for t in top_gainers} | {t['symbol'] for t in top_losers}
@@ -165,21 +166,31 @@ def main():
         }
         
         # Add to report
-        type_icon = "📈" if coin_type == "gainer" else "📉"
-        report_lines.append(
-            f"\n{type_icon} {symbol}\n"
+        line = (
+            f"\n• {symbol}\n"
             f"Price: {curr_price:,.4f}\n"
             f"1h Change: {hour_change:+.2f}%\n"
             f"Vol USD: ${vol_usd:,.0f}"
         )
+        if coin_type == "gainer":
+            gainers_lines.append(line)
+        else:
+            losers_lines.append(line)
+
+    # Construct Final Report
+    final_report = ["📊 Binance Hourly Watchlist Report"]
+    if len(gainers_lines) > 1:
+        final_report.extend(gainers_lines)
+    if len(losers_lines) > 1:
+        final_report.extend(losers_lines)
 
     if delisted_coins:
-        report_lines.append("\n\n🚫 Removed from Watchlist:")
+        final_report.append("\n\n🚫 Removed from Watchlist:")
         for coin in delisted_coins:
-            report_lines.append(f"- {coin}")
+            final_report.append(f"- {coin}")
 
-    if len(report_lines) > 1:
-        send_line_message("\n".join(report_lines))
+    if len(final_report) > 1:
+        send_line_message("\n".join(final_report))
     else:
         print("Watchlist is empty, no report sent.")
 
