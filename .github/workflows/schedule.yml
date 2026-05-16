@@ -29,6 +29,5 @@ jobs:
       - name: Run Market Analyst
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          LINE_ACCESS_TOKEN: ${{ secrets.LINE_ACCESS_TOKEN }}
-          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
-        run: python bot.py
+          NEWS_LINE_ACCESS_TOKEN: ${{ secrets.NEWS_LINE_ACCESS_TOKEN }}
+          NEWS_LINE_USER_ID: ${{ secrets.NEWS_LINE_USER_ID }}        run: python bot.py

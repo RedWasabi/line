@@ -11,8 +11,8 @@ load_dotenv()
 # Configuration
 GIST_ID = os.environ.get("GIST_ID")
 GH_PAT = os.environ.get("GH_PAT")
-LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
-LINE_USER_ID = os.environ.get("LINE_USER_ID")
+BINANCE_LINE_ACCESS_TOKEN = os.environ.get("BINANCE_LINE_ACCESS_TOKEN")
+BINANCE_LINE_USER_ID = os.environ.get("BINANCE_LINE_USER_ID")
 
 # Use data-api.binance.vision (Official Public Data Mirror) to bypass US regional blocks on GitHub runners
 BINANCE_API_URL = "https://data-api.binance.vision/api/v3/ticker/24hr"
@@ -83,12 +83,12 @@ def get_binance_tickers():
 
 def send_line_message(text):
     """Sends the report to LINE."""
-    if not LINE_ACCESS_TOKEN or not LINE_USER_ID:
+    if not BINANCE_LINE_ACCESS_TOKEN or not BINANCE_LINE_USER_ID:
         print("LINE credentials not set.")
         return
     try:
-        line_bot_api = LineBotApi(LINE_ACCESS_TOKEN)
-        line_bot_api.push_message(LINE_USER_ID, TextSendMessage(text=text))
+        line_bot_api = LineBotApi(BINANCE_LINE_ACCESS_TOKEN)
+        line_bot_api.push_message(BINANCE_LINE_USER_ID, TextSendMessage(text=text))
         print("Binance report sent to LINE.")
     except Exception as e:
         print(f"Error sending LINE message: {e}")

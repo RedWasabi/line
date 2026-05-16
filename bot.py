@@ -21,8 +21,8 @@ RSS_FEEDS = [
 
 # Load environment variables
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
-LINE_USER_ID = os.environ.get("LINE_USER_ID")
+NEWS_LINE_ACCESS_TOKEN = os.environ.get("NEWS_LINE_ACCESS_TOKEN")
+NEWS_LINE_USER_ID = os.environ.get("NEWS_LINE_USER_ID")
 
 def get_aggregated_news(urls, limit_per_source=8):
     """Scrapes news from multiple RSS URLs with improved error handling."""
@@ -93,13 +93,13 @@ def summarize_market_news(news_items):
 
 def send_line_message(text):
     """Sends the summarized text to LINE."""
-    if not LINE_ACCESS_TOKEN or not LINE_USER_ID:
-        print("Error: LINE_ACCESS_TOKEN or LINE_USER_ID environment variable is not set.")
+    if not NEWS_LINE_ACCESS_TOKEN or not NEWS_LINE_USER_ID:
+        print("Error: NEWS_LINE_ACCESS_TOKEN or NEWS_LINE_USER_ID environment variable is not set.")
         return False
         
     try:
-        line_bot_api = LineBotApi(LINE_ACCESS_TOKEN)
-        line_bot_api.push_message(LINE_USER_ID, TextSendMessage(text=text))
+        line_bot_api = LineBotApi(NEWS_LINE_ACCESS_TOKEN)
+        line_bot_api.push_message(NEWS_LINE_USER_ID, TextSendMessage(text=text))
         print("Categorized market analysis sent successfully via LINE.")
         return True
     except LineBotApiError as e:
