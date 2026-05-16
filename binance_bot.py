@@ -93,6 +93,16 @@ def send_line_message(text):
     except Exception as e:
         print(f"Error sending LINE message: {e}")
 
+def format_usd(value):
+    """Formats large USD values into readable strings (e.g., $1.2M, $500K)."""
+    if value >= 1_000_000_000:
+        return f"${value / 1_000_000_000:.2f}B"
+    elif value >= 1_000_000:
+        return f"${value / 1_000_000:.2f}M"
+    elif value >= 1_000:
+        return f"${value / 1_000:.2f}K"
+    return f"${value:.2f}"
+
 def main():
     print("Starting Multi-Layer Binance Screening Bot...")
     
@@ -172,7 +182,7 @@ def main():
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
             else:
                 reports["gainer_l1"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | HP: {coin['hp']:,.4f}\n  Inc: {ip:+.2f}% | Drop: {dh:.2f}%\n  Vol: ${vol_usd:,.0f}"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | HP: {coin['hp']:,.4f}\n  Inc: {ip:+.2f}% | Drop: {dh:.2f}%\n  Vol: {format_usd(vol_usd)}"
                 )
 
         elif layer == "gainer_l2":
@@ -203,7 +213,7 @@ def main():
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
             else:
                 reports["loser_l1"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | LP: {coin['lp']:,.4f}\n  Dec: {dp:.2f}% | Bounce: {bh:.2f}%\n  Vol: ${vol_usd:,.0f}"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | LP: {coin['lp']:,.4f}\n  Dec: {dp:.2f}% | Bounce: {bh:.2f}%\n  Vol: {format_usd(vol_usd)}"
                 )
 
         elif layer == "loser_l2":
