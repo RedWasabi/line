@@ -65,8 +65,13 @@
 - **Credential Refactoring:** Updated both bots to use specific environment variables (`NEWS_` and `BINANCE_` prefixes) to prevent notification overlap.
 - **Workflow Optimization:** Updated and debugged GitHub Action workflows to map new secrets and ensure the "Run workflow" triggers remain active.
 
-## 14. Final Status (May 16, 2026)
-- The workspace now operates as a **Dual-Bot Suite**:
+## 14. Trigger Precision (External Cron)
+- **Eliminating Delays:** Replaced the unreliable native GitHub `schedule` trigger (which had 2+ hour delays) with `repository_dispatch`.
+- **API Integration:** Configured workflows to listen for `trigger-binance` and `trigger-news` events.
+- **Precision Control:** Moved scheduling logic to an external provider (cron-job.org) for exact, minute-perfect triggers via the GitHub API.
+
+## 15. Final Status (May 16, 2026)
+- The workspace now operates as a **High-Precision Dual-Bot Suite**:
     - **News Bot:** Professional Macro/Crypto intelligence in Thai.
     - **Binance Bot:** High-frequency, stateful price screening and recovery tracking.
-- Both systems are fully automated, persistent, and secured with isolated notification channels.
+- Both systems are fully automated, persistent, secured, and triggered with minute-level accuracy.
