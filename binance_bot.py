@@ -141,11 +141,10 @@ def main():
         symbol = t['symbol']
         if symbol not in state:
             curr_price = float(t['lastPrice'])
-            high_24h = float(t['highPrice'])
             state[symbol] = {
                 "layer": "gainer_l1",
                 "st": curr_price,
-                "hp": max(curr_price, high_24h),
+                "hp": curr_price,
                 "lp": None,
                 "hc": 0,
                 "thc": 0
@@ -156,11 +155,10 @@ def main():
         symbol = t['symbol']
         if symbol not in state:
             curr_price = float(t['lastPrice'])
-            low_24h = float(t['lowPrice'])
             state[symbol] = {
                 "layer": "loser_l1",
                 "st": curr_price,
-                "lp": min(curr_price, low_24h),
+                "lp": curr_price,
                 "hp": None,
                 "hc": 0,
                 "thc": 0
@@ -188,9 +186,9 @@ def main():
         
         # Transition Logic
         if layer == "gainer_l1":
-            # Update HP (Check both current price and ticker's 24h high to catch intra-hour spikes)
-            ticker_high = float(ticker['highPrice'])
-            coin['hp'] = max(coin['hp'], curr_price, ticker_high)
+            # Update HP
+            if curr_price > coin['hp']:
+                coin['hp'] = curr_price
             
             dh = (coin['hp'] - curr_price) / coin['hp'] * 100
             ip = (curr_price - coin['st']) / coin['st'] * 100
@@ -221,9 +219,8 @@ def main():
                 )
 
         elif layer == "loser_l1":
-            # Update LP (Check both current price and ticker's 24h low to catch intra-hour dips)
-            ticker_low = float(ticker['lowPrice'])
-            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, curr_price, ticker_low)
+            if curr_price < coin['lp']:
+                coin['lp'] = curr_price
                 
             bh = (curr_price - coin['lp']) / coin['lp'] * 100
             dp = (coin['st'] - curr_price) / coin['st'] * 100
