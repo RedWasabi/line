@@ -1,8 +1,8 @@
 name: Daily Crypto Intelligence Update
 
 on:
-  schedule:
-    - cron: '0 5,11,23 * * *' # Runs at 05:00, 11:00, and 23:00 UTC (12:00, 18:00, 06:00 Bangkok)
+  repository_dispatch:
+    types: [trigger-news]
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 env:

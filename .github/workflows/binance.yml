@@ -1,8 +1,8 @@
 name: Hourly Binance Watchlist Bot
 
 on:
-  schedule:
-    - cron: '0 * * * *' # Runs at the start of every hour
+  repository_dispatch:
+    types: [trigger-binance]
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 env:
