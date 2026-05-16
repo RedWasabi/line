@@ -213,8 +213,9 @@ def main():
                 print(f"Delisted {symbol} from Gainer L2 (Timeout)")
                 continue 
             else:
+                delist_str = format_time(coin['hc'])
                 reports["gainer_l2"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  LP: {coin['lp']:,.4f}\n  Bounce: {bp:+.2f}% | Time: {thc_str}"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  LP: {coin['lp']:,.4f}\n  Bounce: {bp:+.2f}% | Time: {thc_str} | Delist: {delist_str}"
                 )
 
         elif layer == "loser_l1":
@@ -244,8 +245,9 @@ def main():
                 print(f"Delisted {symbol} from Loser L2 (Timeout)")
                 continue
             else:
+                delist_str = format_time(coin['hc'])
                 reports["loser_l2"].append(
-                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  HP: {coin['hp']:,.4f}\n  Drop: {dropp:.2f}% | Time: {thc_str}"
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  HP: {coin['hp']:,.4f}\n  Drop: {dropp:.2f}% | Time: {thc_str} | Delist: {delist_str}"
                 )
         
         new_state[symbol] = coin
