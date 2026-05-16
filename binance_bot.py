@@ -14,8 +14,8 @@ GH_PAT = os.environ.get("GH_PAT")
 LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
 LINE_USER_ID = os.environ.get("LINE_USER_ID")
 
-# Use api-g.binance.com (Global) to bypass US regional blocks on GitHub runners
-BINANCE_API_URL = "https://api-g.binance.com/api/v3/ticker/24hr"
+# Use data.binance.com (Public Data Mirror) to bypass US regional blocks on GitHub runners
+BINANCE_API_URL = "https://data.binance.com/api/v3/ticker/24hr"
 GIST_API_URL = f"https://api.github.com/gists/{GIST_ID}"
 
 def load_watchlist():
