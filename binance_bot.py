@@ -18,10 +18,10 @@ LINE_USER_ID = os.environ.get("LINE_USER_ID")
 BINANCE_API_URL = "https://data-api.binance.vision/api/v3/ticker/24hr"
 GIST_API_URL = f"https://api.github.com/gists/{GIST_ID}"
 
-def load_watchlist():
-    """Loads the watchlist from a GitHub Gist."""
+def load_state():
+    """Loads the watchlist state from a GitHub Gist."""
     if not GIST_ID or not GH_PAT:
-        print("GIST_ID or GH_PAT not set. Starting with empty watchlist.")
+        print("GIST_ID or GH_PAT not set. Starting with empty state.")
         return {}
     
     headers = {"Authorization": f"token {GH_PAT}"}
@@ -30,7 +30,12 @@ def load_watchlist():
         if response.status_code == 200:
             gist_data = response.json()
             content = gist_data['files']['watchlist.json']['content']
-            return json.loads(content)
+            data = json.loads(content)
+            # Basic schema check: ensure items have 'layer' key. If not, reset to avoid crashes.
+            if data and not all('layer' in v for v in data.values()):
+                print("Old schema detected. Resetting state for 4-layer logic.")
+                return {}
+            return data
         else:
             print(f"Failed to load Gist: {response.status_code} {response.text}")
             return {}
@@ -38,8 +43,8 @@ def load_watchlist():
         print(f"Error loading Gist: {e}")
         return {}
 
-def save_watchlist(watchlist):
-    """Saves the watchlist to the GitHub Gist."""
+def save_state(state):
+    """Saves the watchlist state to the GitHub Gist."""
     if not GIST_ID or not GH_PAT:
         return
     
@@ -50,28 +55,25 @@ def save_watchlist(watchlist):
     data = {
         "files": {
             "watchlist.json": {
-                "content": json.dumps(watchlist, indent=2)
+                "content": json.dumps(state, indent=2)
             }
         }
     }
     try:
         response = requests.patch(GIST_API_URL, headers=headers, json=data)
         if response.status_code == 200:
-            print("Watchlist saved to Gist successfully.")
+            print("State saved to Gist successfully.")
         else:
             print(f"Failed to save Gist: {response.status_code} {response.text}")
     except Exception as e:
         print(f"Error saving Gist: {e}")
 
 def get_binance_tickers():
-    """Fetches all 24h tickers from Binance and filters for USDT pairs."""
+    """Fetches all 24h tickers from Binance."""
     try:
         response = requests.get(BINANCE_API_URL)
         if response.status_code == 200:
-            tickers = response.json()
-            # Filter for USDT pairs and ensure they are actually coins (not leveraged tokens or stable pairs if possible, but keeping it simple as requested)
-            usdt_tickers = [t for t in tickers if t['symbol'].endswith('USDT')]
-            return usdt_tickers
+            return response.json()
         else:
             print(f"Failed to fetch Binance data: {response.status_code}")
             return []
@@ -92,110 +94,161 @@ def send_line_message(text):
         print(f"Error sending LINE message: {e}")
 
 def main():
-    print("Starting Binance Price Tracking Bot...")
+    print("Starting Multi-Layer Binance Screening Bot...")
     
-    # 1. Load existing watchlist
-    watchlist = load_watchlist()
+    # 1. Load existing state
+    state = load_state()
     
     # 2. Fetch fresh Binance data
     tickers = get_binance_tickers()
     if not tickers:
         return
 
+    # Filter for USDT pairs and significant volume
+    usdt_tickers = [t for t in tickers if t['symbol'].endswith('USDT')]
+    
     # Sort to find Top 10 Gainers and Top 10 Losers (24h change)
-    sorted_tickers = sorted(tickers, key=lambda x: float(x['priceChangePercent']), reverse=True)
+    sorted_tickers = sorted(usdt_tickers, key=lambda x: float(x['priceChangePercent']), reverse=True)
     top_gainers = sorted_tickers[:10]
     top_losers = sorted_tickers[-10:]
 
-    # Map current tickers for easy lookup
-    ticker_map = {t['symbol']: t for t in tickers}
+    ticker_map = {t['symbol']: t for t in usdt_tickers}
     
-    # 3. Process Watchlist
-    new_watchlist = {}
-    delisted_coins = []
-    gainers_lines = ["\n🚀 TOP GAINERS"]
-    losers_lines = ["\n🔻 TOP LOSERS"]
+    # 3. Add New Coins (Anti-Duplication)
+    for t in top_gainers:
+        symbol = t['symbol']
+        if symbol not in state:
+            curr_price = float(t['lastPrice'])
+            state[symbol] = {
+                "layer": "gainer_l1",
+                "st": curr_price,
+                "hp": curr_price,
+                "lp": None,
+                "hc": 0
+            }
+            print(f"Added {symbol} to Gainer L1")
+
+    for t in top_losers:
+        symbol = t['symbol']
+        if symbol not in state:
+            curr_price = float(t['lastPrice'])
+            state[symbol] = {
+                "layer": "loser_l1",
+                "st": curr_price,
+                "lp": curr_price,
+                "hp": None,
+                "hc": 0
+            }
+            print(f"Added {symbol} to Loser L1")
+
+    # 4. Process State Transitions
+    new_state = {}
+    reports = {
+        "gainer_l1": [],
+        "gainer_l2": [],
+        "loser_l1": [],
+        "loser_l2": []
+    }
     
-    # Combine existing watchlist symbols and new top 10s
-    all_monitored_symbols = set(watchlist.keys()) | {t['symbol'] for t in top_gainers} | {t['symbol'] for t in top_losers}
-    
-    for symbol in all_monitored_symbols:
+    for symbol, coin in state.items():
         if symbol not in ticker_map:
             continue
             
         ticker = ticker_map[symbol]
         curr_price = float(ticker['lastPrice'])
         vol_usd = float(ticker['quoteVolume'])
+        layer = coin['layer']
         
-        # Determine if it's a new entry or update
-        if symbol in watchlist:
-            entry = watchlist[symbol]
-            extreme_price = entry['extreme_price']
-            last_hour_price = entry.get('last_hour_price', curr_price)
-            coin_type = entry['type']
+        # Transition Logic
+        if layer == "gainer_l1":
+            # Update HP
+            if curr_price > coin['hp']:
+                coin['hp'] = curr_price
             
-            # Update extreme price
-            if coin_type == "gainer":
-                if curr_price > extreme_price:
-                    extreme_price = curr_price
-                # Check Delist: Dropped 15% from high
-                if curr_price <= (extreme_price * 0.85):
-                    delisted_coins.append(f"{symbol} (High reversed -15%)")
-                    continue
-            else: # loser
-                if curr_price < extreme_price:
-                    extreme_price = curr_price
-                # Check Delist: Rose 15% from low
-                if curr_price >= (extreme_price * 1.15):
-                    delisted_coins.append(f"{symbol} (Low reversed +15%)")
-                    continue
-        else:
-            # New Entry
-            coin_type = "gainer" if any(t['symbol'] == symbol for t in top_gainers) else "loser"
-            extreme_price = curr_price
-            last_hour_price = curr_price
+            dh = (coin['hp'] - curr_price) / coin['hp'] * 100
+            ip = (curr_price - coin['st']) / coin['st'] * 100
             
-        # Calculate 1h change
-        hour_change = ((curr_price - last_hour_price) / last_hour_price * 100) if last_hour_price else 0
+            if dh > 15: # Transfer to L2
+                coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
+            else:
+                reports["gainer_l1"].append(
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | HP: {coin['hp']:,.4f}\n  Inc: {ip:+.2f}% | Drop: {dh:.2f}%\n  Vol: ${vol_usd:,.0f}"
+                )
+
+        elif layer == "gainer_l2":
+            coin['hc'] += 1
+            if curr_price < coin['lp']:
+                coin['lp'] = curr_price
+            
+            bp = (curr_price - coin['lp']) / coin['lp'] * 100
+            
+            if bp > 20: # Promote to L1
+                coin.update({"layer": "gainer_l1", "st": curr_price, "hp": curr_price, "hc": 0})
+            elif coin['hc'] >= 72 and bp <= 20: # Delist
+                print(f"Delisted {symbol} from Gainer L2 (Timeout)")
+                continue 
+            else:
+                reports["gainer_l2"].append(
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  LP: {coin['lp']:,.4f}\n  Bounce: {bp:+.2f}% | HC: {coin['hc']}h"
+                )
+
+        elif layer == "loser_l1":
+            if curr_price < coin['lp']:
+                coin['lp'] = curr_price
+                
+            bh = (curr_price - coin['lp']) / coin['lp'] * 100
+            dp = (coin['st'] - curr_price) / coin['st'] * 100
+            
+            if bh > 15: # Transfer to L2
+                coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
+            else:
+                reports["loser_l1"].append(
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  ST: {coin['st']:,.4f} | LP: {coin['lp']:,.4f}\n  Dec: {dp:.2f}% | Bounce: {bh:.2f}%\n  Vol: ${vol_usd:,.0f}"
+                )
+
+        elif layer == "loser_l2":
+            coin['hc'] += 1
+            if curr_price > coin['hp']:
+                coin['hp'] = curr_price
+            
+            dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
+            
+            if dropp > 20: # Promote to L1
+                coin.update({"layer": "loser_l1", "st": curr_price, "lp": curr_price, "hc": 0})
+            elif coin['hc'] >= 72 and dropp <= 20: # Delist
+                print(f"Delisted {symbol} from Loser L2 (Timeout)")
+                continue
+            else:
+                reports["loser_l2"].append(
+                    f"• {symbol}\n  Price: {curr_price:,.4f}\n  HP: {coin['hp']:,.4f}\n  Drop: {dropp:.2f}% | HC: {coin['hc']}h"
+                )
         
-        # Update/Add to new watchlist
-        new_watchlist[symbol] = {
-            "type": coin_type,
-            "extreme_price": extreme_price,
-            "last_hour_price": curr_price # Update for next hour
-        }
-        
-        # Add to report
-        line = (
-            f"\n• {symbol}\n"
-            f"Price: {curr_price:,.4f}\n"
-            f"1h Change: {hour_change:+.2f}%\n"
-            f"Vol USD: ${vol_usd:,.0f}"
-        )
-        if coin_type == "gainer":
-            gainers_lines.append(line)
-        else:
-            losers_lines.append(line)
+        new_state[symbol] = coin
 
-    # Construct Final Report
-    final_report = ["📊 Binance Hourly Watchlist Report"]
-    if len(gainers_lines) > 1:
-        final_report.extend(gainers_lines)
-    if len(losers_lines) > 1:
-        final_report.extend(losers_lines)
+    # 5. Format & Send LINE Message
+    final_report = ["📊 Binance Screening Report"]
+    
+    sections = [
+        ("🔥 Gainer (L1 - Momentum)", "gainer_l1"),
+        ("🏥 Gainer L2 (Recovery)", "gainer_l2"),
+        ("🩸 Loser (L1 - Bottoming)", "loser_l1"),
+        ("📉 Loser L2 (Dead Cat)", "loser_l2")
+    ]
+    
+    has_content = False
+    for title, key in sections:
+        if reports[key]:
+            final_report.append(f"\n{title}")
+            final_report.extend(reports[key])
+            has_content = True
 
-    if delisted_coins:
-        final_report.append("\n\n🚫 Removed from Watchlist:")
-        for coin in delisted_coins:
-            final_report.append(f"- {coin}")
-
-    if len(final_report) > 1:
+    if has_content:
         send_line_message("\n".join(final_report))
     else:
-        print("Watchlist is empty, no report sent.")
+        print("No active coins to report.")
 
-    # 4. Save state
-    save_watchlist(new_watchlist)
+    # 6. Save State
+    save_state(new_state)
     print("Process completed.")
 
 if __name__ == "__main__":
