@@ -227,9 +227,10 @@ def main():
             }
             print(f"Added {symbol} to Loser L1")
 
-    # 4. Process State Transitions & Build Reports
+    # 4. Process State Transitions & Collect Data for Reports
     new_state = {}
-    reports = {
+    # Use objects to store data before sorting
+    report_data = {
         "gainer_l1": [],
         "gainer_l2": [],
         "loser_l1": [],
@@ -244,7 +245,6 @@ def main():
         curr_price = float(ticker['lastPrice'])
         vol_usd = float(ticker['quoteVolume'])
         ch24 = float(ticker['priceChangePercent'])
-        thc_str = format_time(coin['thc'])
         
         # Fetch Intra-hour Spikes (Klines)
         k_high, k_low = get_1h_high_low(symbol)
@@ -254,21 +254,16 @@ def main():
         
         if current_layer == "gainer_l1":
             # Update Session High
-            # Use k_high if available to catch spikes between runs
             obs_high = max(curr_price, k_high) if k_high else curr_price
             coin['hp'] = max(coin['hp'], obs_high)
-            
             dh = (coin['hp'] - curr_price) / coin['hp'] * 100
-            # Only transition to L2 if we've been tracking for > 0 hours
             if dh > 15 and coin['thc'] > 0:
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
                 
         elif current_layer == "gainer_l2":
             coin['hc'] += 1
-            # Update Session Low
             obs_low = min(curr_price, k_low) if k_low else curr_price
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
-            
             bp = (curr_price - coin['lp']) / coin['lp'] * 100
             if bp > 20:
                 coin.update({"layer": "gainer_l1", "st": curr_price, "hp": curr_price, "hc": 0})
@@ -277,21 +272,16 @@ def main():
                 continue
 
         elif current_layer == "loser_l1":
-            # Update Session Low
             obs_low = min(curr_price, k_low) if k_low else curr_price
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
-            
             bh = (curr_price - coin['lp']) / coin['lp'] * 100
-            # Only transition to L2 if we've been tracking for > 0 hours
             if bh > 15 and coin['thc'] > 0:
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
 
         elif current_layer == "loser_l2":
             coin['hc'] += 1
-            # Update Session High
             obs_high = max(curr_price, k_high) if k_high else curr_price
             coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, obs_high)
-            
             dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
             if dropp > 20:
                 coin.update({"layer": "loser_l1", "st": curr_price, "lp": curr_price, "hc": 0})
@@ -299,64 +289,87 @@ def main():
                 print(f"Delisted {symbol} from Loser L2 (Timeout)")
                 continue
 
-        # Pass 2: Build Reports based on (potentially new) layer
+        # Collect data for Pass 2
         final_layer = coin['layer']
-        p_str = format_price(curr_price)
-        st_str = format_price(coin['st']) if coin['st'] else "N/A"
-        rev_tag = " 🔄 <b>Trend Reversed</b>" if coin.get('rev') else ""
-        vol_zone = get_volume_zone(vol_usd)
+        report_data[final_layer].append({
+            "symbol": symbol,
+            "coin": coin.copy(),
+            "curr_price": curr_price,
+            "vol_usd": vol_usd,
+            "ch24": ch24
+        })
         
-        if final_layer == "gainer_l1":
-            hp_str = format_price(coin['hp'])
-            ip = (curr_price - coin['st']) / coin['st'] * 100
-            dh = (coin['hp'] - curr_price) / coin['hp'] * 100
-            reports["gainer_l1"].append(
-                f"<b>• {symbol}</b>{rev_tag}\n"
-                f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>\n"
-                f"  Inc: <b>{ip:+.2f}%</b> | Drop: <b>{dh:.2f}%</b>\n"
-                f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                f"  Time: {thc_str}"
-            )
-        elif final_layer == "gainer_l2":
-            lp_str = format_price(coin['lp'])
-            bp = (curr_price - coin['lp']) / coin['lp'] * 100
-            rem_str = format_time(max(0, 72 - coin['hc']))
-            reports["gainer_l2"].append(
-                f"<b>• {symbol}</b>{rev_tag}\n"
-                f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                f"  LP: <code>{lp_str}</code> | Bounce: <b>{bp:+.2f}%</b>\n"
-                f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
-            )
-        elif final_layer == "loser_l1":
-            lp_str = format_price(coin['lp'])
-            dp = (coin['st'] - curr_price) / coin['st'] * 100
-            bh = (curr_price - coin['lp']) / coin['lp'] * 100
-            reports["loser_l1"].append(
-                f"<b>• {symbol}</b>{rev_tag}\n"
-                f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>\n"
-                f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
-                f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                f"  Time: {thc_str}"
-            )
-        elif final_layer == "loser_l2":
-            hp_str = format_price(coin['hp'])
-            dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
-            rem_str = format_time(max(0, 72 - coin['hc']))
-            reports["loser_l2"].append(
-                f"<b>• {symbol}</b>{rev_tag}\n"
-                f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                f"  HP: <code>{hp_str}</code> | Drop: <b>{dropp:.2f}%</b>\n"
-                f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
-            )
-            
         # Reset reversal tag after one report
         if 'rev' in coin:
             coin['rev'] = False
         new_state[symbol] = coin
+
+    # Pass 2: Sort and Format Reports
+    final_report_strings = {k: [] for k in report_data.keys()}
+    
+    for layer_key, coins_list in report_data.items():
+        # Sort by total hour count (thc) descending: longest at the top
+        sorted_coins = sorted(coins_list, key=lambda x: x['coin']['thc'], reverse=True)
+        
+        for item in sorted_coins:
+            symbol = item['symbol']
+            coin = item['coin']
+            curr_price = item['curr_price']
+            vol_usd = item['vol_usd']
+            ch24 = item['ch24']
+            
+            thc_str = format_time(coin['thc'])
+            p_str = format_price(curr_price)
+            st_str = format_price(coin['st']) if coin['st'] else "N/A"
+            rev_tag = " 🔄 <b>Trend Reversed</b>" if coin.get('rev') else ""
+            vol_zone = get_volume_zone(vol_usd)
+            
+            if layer_key == "gainer_l1":
+                hp_str = format_price(coin['hp'])
+                ip = (curr_price - coin['st']) / coin['st'] * 100
+                dh = (coin['hp'] - curr_price) / coin['hp'] * 100
+                final_report_strings["gainer_l1"].append(
+                    f"<b>• {symbol}</b>{rev_tag}\n"
+                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                    f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>\n"
+                    f"  Inc: <b>{ip:+.2f}%</b> | Drop: <b>{dh:.2f}%</b>\n"
+                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                    f"  Time: {thc_str}"
+                )
+            elif layer_key == "gainer_l2":
+                lp_str = format_price(coin['lp'])
+                bp = (curr_price - coin['lp']) / coin['lp'] * 100
+                rem_str = format_time(max(0, 72 - coin['hc']))
+                final_report_strings["gainer_l2"].append(
+                    f"<b>• {symbol}</b>{rev_tag}\n"
+                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                    f"  LP: <code>{lp_str}</code> | Bounce: <b>{bp:+.2f}%</b>\n"
+                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                    f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
+                )
+            elif layer_key == "loser_l1":
+                lp_str = format_price(coin['lp'])
+                dp = (coin['st'] - curr_price) / coin['st'] * 100
+                bh = (curr_price - coin['lp']) / coin['lp'] * 100
+                final_report_strings["loser_l1"].append(
+                    f"<b>• {symbol}</b>{rev_tag}\n"
+                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                    f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>\n"
+                    f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
+                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                    f"  Time: {thc_str}"
+                )
+            elif layer_key == "loser_l2":
+                hp_str = format_price(coin['hp'])
+                dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
+                rem_str = format_time(max(0, 72 - coin['hc']))
+                final_report_strings["loser_l2"].append(
+                    f"<b>• {symbol}</b>{rev_tag}\n"
+                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                    f"  HP: <code>{hp_str}</code> | Drop: <b>{dropp:.2f}%</b>\n"
+                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                    f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
+                )
 
     # 5. Format & Send Telegram Message
     final_report = ["📊 <b>Binance Screening Report</b>"]
@@ -370,9 +383,9 @@ def main():
     
     has_content = False
     for title, key in sections:
-        if reports[key]:
+        if final_report_strings[key]:
             final_report.append(f"\n{title}")
-            final_report.extend(reports[key])
+            final_report.extend(final_report_strings[key])
             has_content = True
 
     if has_content:
