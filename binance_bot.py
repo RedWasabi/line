@@ -253,38 +253,49 @@ def main():
         current_layer = coin['layer']
         
         if current_layer == "gainer_l1":
-            # Update Session High
+            # Track Session High (Momentum)
             obs_high = max(curr_price, k_high) if k_high else curr_price
             coin['hp'] = max(coin['hp'], obs_high)
-            dh = (coin['hp'] - curr_price) / coin['hp'] * 100
-            if dh > 15 and coin['thc'] > 0:
+            
+            # Check for 15% Drop -> Move to L2 (Recovery)
+            drop_check = (coin['hp'] - curr_price) / coin['hp'] * 100
+            if drop_check > 15 and coin['thc'] > 0:
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
                 
         elif current_layer == "gainer_l2":
             coin['hc'] += 1
+            # Track Session Low (Correction Bottom)
             obs_low = min(curr_price, k_low) if k_low else curr_price
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
-            bp = (curr_price - coin['lp']) / coin['lp'] * 100
-            if bp > 20:
-                coin.update({"layer": "gainer_l1", "st": curr_price, "hp": curr_price, "hc": 0})
+            
+            # Check for 20% Bounce -> Move back to L1 (Momentum)
+            bounce_check = (curr_price - coin['lp']) / coin['lp'] * 100
+            if bounce_check > 20:
+                coin.update({"layer": "gainer_l1", "st": curr_price, "hp": curr_price, "lp": None, "hc": 0})
             elif coin['hc'] >= 72:
                 print(f"Delisted {symbol} from Gainer L2 (Timeout)")
                 continue
 
         elif current_layer == "loser_l1":
+            # Track Session Low (Bottoming)
             obs_low = min(curr_price, k_low) if k_low else curr_price
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
-            bh = (curr_price - coin['lp']) / coin['lp'] * 100
-            if bh > 15 and coin['thc'] > 0:
+            
+            # Check for 15% Bounce -> Move to L2 (Dead Cat)
+            bounce_check = (curr_price - coin['lp']) / coin['lp'] * 100
+            if bounce_check > 15 and coin['thc'] > 0:
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
 
         elif current_layer == "loser_l2":
             coin['hc'] += 1
+            # Track Session High (Bounce Peak)
             obs_high = max(curr_price, k_high) if k_high else curr_price
             coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, obs_high)
-            dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
-            if dropp > 20:
-                coin.update({"layer": "loser_l1", "st": curr_price, "lp": curr_price, "hc": 0})
+            
+            # Check for 20% Drop -> Move back to L1 (Bottoming)
+            drop_check = (coin['hp'] - curr_price) / coin['hp'] * 100
+            if drop_check > 20:
+                coin.update({"layer": "loser_l1", "st": curr_price, "lp": curr_price, "hp": None, "hc": 0})
             elif coin['hc'] >= 72:
                 print(f"Delisted {symbol} from Loser L2 (Timeout)")
                 continue
