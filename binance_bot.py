@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 from dotenv import load_dotenv
 
@@ -382,8 +383,8 @@ def main():
                     f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
                 )
 
-    # 5. Format & Send Telegram Message
-    final_report = ["📊 <b>Binance Screening Report</b>"]
+    # 5. Format & Send Telegram Messages (Section by Section to avoid Length Limit)
+    header = "📊 <b>Binance Screening Report</b>"
     
     sections = [
         ("🔥 <b>Gainer (L1 - Momentum)</b>", "gainer_l1"),
@@ -392,16 +393,24 @@ def main():
         ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
     ]
     
-    has_content = False
+    first_message = True
     for title, key in sections:
         if final_report_strings[key]:
-            final_report.append(f"\n{title}")
-            final_report.extend(final_report_strings[key])
-            has_content = True
+            # For the very first section, include the header
+            msg_parts = []
+            if first_message:
+                msg_parts.append(header)
+                first_message = False
+            
+            msg_parts.append(f"\n{title}")
+            msg_parts.extend(final_report_strings[key])
+            
+            # Send this section
+            send_telegram_message("\n".join(msg_parts))
+            # Small sleep to ensure order and avoid Telegram flood limits
+            time.sleep(1)
 
-    if has_content:
-        send_telegram_message("\n".join(final_report))
-    else:
+    if first_message:
         print("No active coins to report.")
 
     # 6. Save State
