@@ -52,27 +52,30 @@ def get_aggregated_news(urls, limit_per_source=8):
     before_sleep=lambda retry_state: print(f"API busy or error. Retrying in {retry_state.next_action.sleep} seconds... (Attempt {retry_state.attempt_number})")
 )
 def summarize_market_news(news_items):
-    """Summarizes market-moving news using Groq with strict categorization and Thai output."""
+    """Summarizes market-moving news using Groq with deep insight and modern HTML formatting."""
     if not GROQ_API_KEY:
         print("Error: GROQ_API_KEY environment variable is not set.")
         return None
     
     client = Groq(api_key=GROQ_API_KEY)
     
-    # Highly structured prompt for Categorized Analysis
+    # Advanced V2 Prompt: Elite Analyst Persona + Modern UI Formatting
     prompt = (
-        "You are a Senior Crypto Market Analyst specializing in Macro-Economics and Institutional Flows. "
-        "Analyze the following news items and produce a report in THAI using the EXACT format below.\n\n"
-        "### TASK:\n"
-        "1. FILTER for high-impact events: Jerome Powell speeches, Fed decisions, CPI/Inflation data, BlackRock/MicroStrategy moves, SEC/Regulatory actions.\n"
-        "2. CATEGORIZE the news into three specific tags: [📌 Macro & Fed], [🏢 Institutional Activity], and [⚖️ Regulation & Tech].\n"
-        "3. For each news item, provide a concise Thai summary and a 'Market Sentiment' (Bullish/Bearish/Neutral) for Bitcoin with a brief reason.\n\n"
-        "### FORMAT RULES:\n"
-        "- Use <b>...</b> for category headers.\n"
-        "- Use bullet points.\n"
-        "- Use <i>...</i> for sentiment and reasoning.\n"
-        "- If a category has no relevant news, write: 'ไม่มีข่าวสำคัญในหมวดหมู่นี้'\n"
-        "- Keep it professional and concise.\n\n"
+        "You are an Elite Macro-Crypto Market Strategist. Analyze the following news items and produce a deep-insight report in THAI. "
+        "Your goal is to connect news events to 'Liquidity & Money Flow' and interest rate expectations.\n\n"
+        "### REPORT STRUCTURE (MANDATORY):\n"
+        "1. 📊 <b>สรุปภาวะตลาด (Executive Summary):</b>\n"
+        "   - One powerful paragraph synthesizing the overall market mood and the most critical macro theme (e.g., Fed posture, inflation trajectory, institutional shifts).\n\n"
+        "2. <b>[Category Name] (e.g., 📌 Macro & Fed)</b>\n"
+        "   - Use <blockquote>...</blockquote> for each news item under a category.\n"
+        "   - Inside the blockquote: <b>[Headline]</b> followed by a deep analytical summary in Thai.\n"
+        "   - Focus on *why* this matters for liquidity or capital flight.\n"
+        "   - Use <i>Impact:</i> [Bullish/Bearish/Neutral] + brief reason.\n\n"
+        "### FORMATTING RULES (STRICT):\n"
+        "- Use <b>...</b> for bold headers and key entities (e.g., <b>Fed</b>, <b>BlackRock</b>).\n"
+        "- ALWAYS wrap all numbers, percentages, dates, and asset tickers in <code>...</code> tags (e.g., <code>$65,000</code>, <code>+3.4%</code>, <code>BTC</code>).\n"
+        "- Use structural emojis for professional visual scanning.\n"
+        "- If a category has no relevant news, write: 'ไม่มีความเคลื่อนไหวสำคัญในหมวดหมู่นี้'\n\n"
         "--- NEWS DATA ---\n"
     )
     
@@ -82,11 +85,11 @@ def summarize_market_news(news_items):
     completion = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-            {"role": "system", "content": "You are a professional market analyst."},
+            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. Always use HTML parse mode compatible tags: <b>, <i>, <code>, <u>, <a>, <s>, <blockquote>."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.5,
-        max_tokens=2048,
+        temperature=0.4,
+        max_tokens=3000,
     )
     return completion.choices[0].message.content
 

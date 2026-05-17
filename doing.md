@@ -6,12 +6,15 @@
 ## 🟢 Completed Tasks
 1.  **Macro News Bot (`bot.py`)**:
     - Thai-language summaries via Groq (Llama 3.3 70B).
+    - **Executive Summary (v2)**: Added top-level TL;DR for market mood.
+    - **Deep Insight (v2)**: Focus on 'Liquidity & Money Flow' and interest rate trajectory.
+    - **Modern UI (v2)**: Enhanced formatting with blockquotes, monospace data (<code>), and rich emojis.
     - **Telegram Migration**: Unlimited messages via `TELEGRAM_BOT_TOKEN`.
-    - **UI Enhancement**: HTML Bold/Italic rich-text formatting.
     - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
     - **Duration-Based Sorting (v2.5)**: All report sections are now sorted by time on watchlist (longest at the top).
+    - **Algorithmic Symmetry**: Perfectly mirrored logic for Gainers and Losers (Drop vs Bounce) for 100% mathematical consistency.
     - **Intra-hour Precision (v2.4)**: Uses Binance Klines (1h candles) to capture "invisible" spikes/dips.
     - **First-Run Protection**: Logic fix to ensure all coins start in L1 for their first appearance.
     - **Liquidity Zones (v2.3)**: Visual emojis for volume: 🐟 Retail, 🐬 Healthy, 🐳 Institutional.

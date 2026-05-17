@@ -125,3 +125,16 @@
 ## 23. First-Run Layer Protection
 - **Initial Run Lock:** Implemented a logic safeguard (`thc > 0`) that prevents coins from transitioning to L2 during their very first hour on the watchlist.
 - **Clean Starts:** This ensures that every new coin or reversal starts correctly in L1, even if the 1-hour candlestick data contains volatility that occurred just before the bot run.
+
+## 24. Algorithmic Symmetry (Version 2.5 Refinement)
+- **Perfect Mirroring:** Conducted a full audit and refactor of the Gainer vs. Loser state machines to ensure they are true mathematical inverses.
+- **Logic Standardization:** Standardized all internal variable names (e.g., `drop_check` vs `bounce_check`) and processing structures, ensuring 100% consistency across all four layers of the screening engine.
+
+## 25. News Bot Intelligence Upgrade (Version 2)
+- **Executive Summary (TL;DR):** Added a mandatory one-paragraph market synthesis at the top of the report to provide immediate context.
+- **Deep Liquidity Analysis:** Re-engineered the AI prompt to force the Groq AI (`llama-3.3-70b-versatile`) to analyze news based on 'Liquidity & Money Flow' and interest rate trajectories rather than just summarizing events.
+- **Modern UI Formatting:** Implemented a data-rich visual style for Telegram:
+    - `<blockquote>` blocks for news items to create visual separation.
+    - `<code>` tags for all quantitative data (prices, percentages, tickers) for high readability.
+    - **Bold Entities** (e.g., Fed, BlackRock) for rapid scanning.
+    - Optimized emoji-based structural layout.
