@@ -117,3 +117,11 @@
 - **Eliminating Historical Noise:** Refactored the watermarking logic to completely ignore the Binance 24h Ticker extremes (which look back 24h). 
 - **Candlestick Integration:** Implemented the Binance **Klines (1h candles)** API. The bot now fetches the exact High/Low of the last 60 minutes for every coin on the watchlist.
 - **Invisible Spike Detection:** This ensures that price spikes or dips that happen *between* the hourly bot runs are captured with 100% accuracy, without being affected by irrelevant price action from the previous day.
+
+## 22. Duration-Based Sorting (Version 2.5)
+- **Time-Ordered Reports:** Refactored the reporting engine to sort all layers (L1 and L2) by total time on the watchlist (`thc`).
+- **Oldest Trends First:** Coins that have been tracked for the longest time now appear at the top of each Telegram section, providing a clearer view of trend maturity.
+
+## 23. First-Run Layer Protection
+- **Initial Run Lock:** Implemented a logic safeguard (`thc > 0`) that prevents coins from transitioning to L2 during their very first hour on the watchlist.
+- **Clean Starts:** This ensures that every new coin or reversal starts correctly in L1, even if the 1-hour candlestick data contains volatility that occurred just before the bot run.

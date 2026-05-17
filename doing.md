@@ -11,7 +11,9 @@
     - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
-    - **Intra-hour Precision (v2.4)**: Uses Binance Klines (1h candles) to capture "invisible" spikes/dips between runs without historical noise.
+    - **Duration-Based Sorting (v2.5)**: All report sections are now sorted by time on watchlist (longest at the top).
+    - **Intra-hour Precision (v2.4)**: Uses Binance Klines (1h candles) to capture "invisible" spikes/dips.
+    - **First-Run Protection**: Logic fix to ensure all coins start in L1 for their first appearance.
     - **Liquidity Zones (v2.3)**: Visual emojis for volume: 🐟 Retail, 🐬 Healthy, 🐳 Institutional.
     - **Ultimate Reversal (v2.2)**: Seamlessly crossover between categories with 🔄 Trend Reversed tag.
     - **Quality Control**: Strict $1,000,000 daily volume filter.
