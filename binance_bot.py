@@ -228,11 +228,8 @@ def main():
         current_layer = coin['layer']
         
         if current_layer == "gainer_l1":
-            # For brand new coins (thc == 1), don't merge with 24h High yet 
-            # to prevent immediate jump to L2 due to past spikes.
-            if coin['thc'] > 1:
-                ticker_high = float(ticker['highPrice'])
-                coin['hp'] = max(coin['hp'], ticker_high)
+            # Update Session High (Only based on prices seen during monitoring)
+            coin['hp'] = max(coin['hp'], curr_price)
             
             dh = (coin['hp'] - curr_price) / coin['hp'] * 100
             if dh > 15:
@@ -240,9 +237,9 @@ def main():
                 
         elif current_layer == "gainer_l2":
             coin['hc'] += 1
-            # Merge with 24h Low
-            ticker_low = float(ticker['lowPrice'])
-            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, ticker_low)
+            # Update Session Low (Only based on prices seen during monitoring)
+            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, curr_price)
+            
             bp = (curr_price - coin['lp']) / coin['lp'] * 100
             if bp > 20:
                 coin.update({"layer": "gainer_l1", "st": curr_price, "hp": curr_price, "hc": 0})
@@ -251,10 +248,8 @@ def main():
                 continue
 
         elif current_layer == "loser_l1":
-            # For brand new coins (thc == 1), don't merge with 24h Low yet
-            if coin['thc'] > 1:
-                ticker_low = float(ticker['lowPrice'])
-                coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, ticker_low)
+            # Update Session Low
+            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, curr_price)
             
             bh = (curr_price - coin['lp']) / coin['lp'] * 100
             if bh > 15:
@@ -262,9 +257,9 @@ def main():
 
         elif current_layer == "loser_l2":
             coin['hc'] += 1
-            # Merge with 24h High
-            ticker_high = float(ticker['highPrice'])
-            coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, ticker_high)
+            # Update Session High
+            coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, curr_price)
+            
             dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
             if dropp > 20:
                 coin.update({"layer": "loser_l1", "st": curr_price, "lp": curr_price, "hc": 0})
