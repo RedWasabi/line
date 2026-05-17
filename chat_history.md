@@ -112,3 +112,8 @@
     - 🐬 **Healthy:** $5M - $20M USD (Sustainable retail/mid-cap activity).
     - 🐳 **Institutional:** >$20M USD (Large market caps, high liquidity).
 - **Safety First:** Maintained the strict $1M minimum filter to completely eliminate the "Whale Danger Zone" (<$1M).
+
+## 21. Intra-hour Precision (Version 2.4)
+- **Eliminating Historical Noise:** Refactored the watermarking logic to completely ignore the Binance 24h Ticker extremes (which look back 24h). 
+- **Candlestick Integration:** Implemented the Binance **Klines (1h candles)** API. The bot now fetches the exact High/Low of the last 60 minutes for every coin on the watchlist.
+- **Invisible Spike Detection:** This ensures that price spikes or dips that happen *between* the hourly bot runs are captured with 100% accuracy, without being affected by irrelevant price action from the previous day.

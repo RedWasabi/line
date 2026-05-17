@@ -11,14 +11,14 @@
     - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
-    - **Liquidity Zones (v2.3)**: Visual emojis to classify coins by volume: 🐟 Retail ($1M-$5M), 🐬 Healthy ($5M-$20M), 🐳 Institutional (>$20M).
-    - **Ultimate Reversal (v2.2)**: Seamlessly crossover coins between Gainer and Loser categories if their trend flips.
-    - **Trend Labels**: Visual 🔄 Trend Reversed tag in reports for crossover events.
-    - **Volume Filter**: Guaranteed quality by filtering for >$1M daily trading volume.
-    - **Algorithm Fix (v2.1)**: Resolved transition bug where coins disappeared for one run.
-    - **High-Precision UI**: Dynamic price formatting (up to 8 decimals).
-    - **Live Metrics**: Added Binance 24h Change % to reports.
-    - **Corrected Timer**: 'Delist in' counts down from 72h (only in L2).
+    - **Intra-hour Precision (v2.4)**: Uses Binance Klines (1h candles) to capture "invisible" spikes/dips between runs without historical noise.
+    - **Liquidity Zones (v2.3)**: Visual emojis for volume: 🐟 Retail, 🐬 Healthy, 🐳 Institutional.
+    - **Ultimate Reversal (v2.2)**: Seamlessly crossover between categories with 🔄 Trend Reversed tag.
+    - **Quality Control**: Strict $1,000,000 daily volume filter.
+    - **Algorithm Fix (v2.1)**: Continuous tracking during transitions.
+    - **High-Precision UI**: Dynamic 8-decimal price formatting.
+    - **Live Metrics**: Live Binance 24h Change % included.
+    - **Corrected Timer**: 'Delist in' counts down from 72h (L2 only).
     - **External Trigger**: `repository_dispatch` (type: `trigger-binance`).
 3.  **Infrastructure**:
     - GitHub Gist for persistent state.

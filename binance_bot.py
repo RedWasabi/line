@@ -13,7 +13,7 @@ BINANCE_TELEGRAM_BOT_TOKEN = os.environ.get("BINANCE_TELEGRAM_BOT_TOKEN")
 BINANCE_TELEGRAM_CHAT_ID = os.environ.get("BINANCE_TELEGRAM_CHAT_ID")
 
 # Use data-api.binance.vision (Official Public Data Mirror) to bypass US regional blocks on GitHub runners
-BINANCE_API_URL = "https://data-api.binance.vision/api/v3/ticker/24hr"
+BINANCE_BASE_URL = "https://data-api.binance.vision/api/v3"
 GIST_API_URL = f"https://api.github.com/gists/{GIST_ID}"
 
 def load_state():
@@ -68,8 +68,9 @@ def save_state(state):
 
 def get_binance_tickers():
     """Fetches all 24h tickers from Binance."""
+    url = f"{BINANCE_BASE_URL}/ticker/24hr"
     try:
-        response = requests.get(BINANCE_API_URL)
+        response = requests.get(url)
         if response.status_code == 200:
             return response.json()
         else:
@@ -78,6 +79,27 @@ def get_binance_tickers():
     except Exception as e:
         print(f"Error fetching Binance data: {e}")
         return []
+
+def get_1h_high_low(symbol):
+    """Fetches the high and low of the last two 1h candles to capture intra-hour spikes."""
+    url = f"{BINANCE_BASE_URL}/klines"
+    params = {"symbol": symbol, "interval": "1h", "limit": 2}
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            klines = response.json()
+            if not klines:
+                return None, None
+            # Extract High (index 2) and Low (index 3) from both candles
+            highs = [float(k[2]) for k in klines]
+            lows = [float(k[3]) for k in klines]
+            return max(highs), min(lows)
+        else:
+            print(f"Klines API Error for {symbol}: {response.status_code}")
+            return None, None
+    except Exception as e:
+        print(f"Error fetching Klines for {symbol}: {e}")
+        return None, None
 
 def send_telegram_message(text):
     """Sends the report to Telegram."""
@@ -224,12 +246,17 @@ def main():
         ch24 = float(ticker['priceChangePercent'])
         thc_str = format_time(coin['thc'])
         
+        # Fetch Intra-hour Spikes (Klines)
+        k_high, k_low = get_1h_high_low(symbol)
+        
         # Pass 1: Handle Transitions & Updates
         current_layer = coin['layer']
         
         if current_layer == "gainer_l1":
-            # Update Session High (Only based on prices seen during monitoring)
-            coin['hp'] = max(coin['hp'], curr_price)
+            # Update Session High
+            # Use k_high if available to catch spikes between runs
+            obs_high = max(curr_price, k_high) if k_high else curr_price
+            coin['hp'] = max(coin['hp'], obs_high)
             
             dh = (coin['hp'] - curr_price) / coin['hp'] * 100
             if dh > 15:
@@ -237,8 +264,9 @@ def main():
                 
         elif current_layer == "gainer_l2":
             coin['hc'] += 1
-            # Update Session Low (Only based on prices seen during monitoring)
-            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, curr_price)
+            # Update Session Low
+            obs_low = min(curr_price, k_low) if k_low else curr_price
+            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
             
             bp = (curr_price - coin['lp']) / coin['lp'] * 100
             if bp > 20:
@@ -249,7 +277,8 @@ def main():
 
         elif current_layer == "loser_l1":
             # Update Session Low
-            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, curr_price)
+            obs_low = min(curr_price, k_low) if k_low else curr_price
+            coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
             
             bh = (curr_price - coin['lp']) / coin['lp'] * 100
             if bh > 15:
@@ -258,7 +287,8 @@ def main():
         elif current_layer == "loser_l2":
             coin['hc'] += 1
             # Update Session High
-            coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, curr_price)
+            obs_high = max(curr_price, k_high) if k_high else curr_price
+            coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, obs_high)
             
             dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
             if dropp > 20:
