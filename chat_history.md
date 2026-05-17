@@ -162,3 +162,7 @@
 - **Ghost Data Mitigation:** Identified an issue where recently delisted or suspended coins (e.g., UTKUSDT) continued to appear in reports because Binance retains their historical 24h ticker data.
 - **Active Trading Check:** Added a strict filter requiring `bidPrice > 0`. This ensures the bot only tracks and reports on assets that have an active order book and are currently tradable.
 
+## 30. Cloud Synchronization & Deployment
+- **Deployment:** Pushed local updates (v2.7 & v2.8) to the master branch to synchronize the GitHub Actions environment with the latest local logic.
+- **Verification:** Confirmed that the `bidPrice > 0` filter is now active in the cloud, which will automatically purge delisted "ghost" coins like `UTKUSDT` from the Gist state on the next run.
+
