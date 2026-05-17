@@ -259,7 +259,8 @@ def main():
             coin['hp'] = max(coin['hp'], obs_high)
             
             dh = (coin['hp'] - curr_price) / coin['hp'] * 100
-            if dh > 15:
+            # Only transition to L2 if we've been tracking for > 0 hours
+            if dh > 15 and coin['thc'] > 0:
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
                 
         elif current_layer == "gainer_l2":
@@ -281,7 +282,8 @@ def main():
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
             
             bh = (curr_price - coin['lp']) / coin['lp'] * 100
-            if bh > 15:
+            # Only transition to L2 if we've been tracking for > 0 hours
+            if bh > 15 and coin['thc'] > 0:
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
 
         elif current_layer == "loser_l2":
