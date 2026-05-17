@@ -150,3 +150,15 @@
 - **Bypassing Telegram Limits:** Resolved a critical failure where the bot stopped sending messages due to the 4096-character limit (Error 400).
 - **Sectional Message Splitting:** Refactored the reporting logic to send each major category (Gainer L1, L2, etc.) as a separate Telegram message. This ensures the bot can track an unlimited number of coins without ever exceeding the platform's constraints.
 - **Ordered Delivery:** Implemented a 1-second delay between sectional messages to ensure they appear in the correct order and avoid Telegram's anti-flood rate limits.
+
+## 28. Color-Coded Reversals (Version 2.7)
+- **Visual Signal Differentiation:** Enhanced the "Ultimate Reversal" feature by distinguishing between Bullish and Bearish crossovers.
+- **Directional Tags:**
+    - **Loser → Gainer:** 🟢 🔄 **Bullish Reversal**
+    - **Gainer → Loser:** 🔴 🔄 **Bearish Reversal**
+- **UI Clarity:** This allows the user to immediately identify the direction of a major trend shift at a glance without reading the section header.
+
+## 29. Delisted Coin Filter (Version 2.8)
+- **Ghost Data Mitigation:** Identified an issue where recently delisted or suspended coins (e.g., UTKUSDT) continued to appear in reports because Binance retains their historical 24h ticker data.
+- **Active Trading Check:** Added a strict filter requiring `bidPrice > 0`. This ensures the bot only tracks and reports on assets that have an active order book and are currently tradable.
+

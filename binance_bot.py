@@ -174,10 +174,12 @@ def main():
     if not tickers:
         return
 
-    # Filter for USDT pairs and significant volume (>$1M)
+    # Filter for USDT pairs, significant volume (>$1M), and active trading (bidPrice > 0)
     usdt_tickers = [
         t for t in tickers 
-        if t['symbol'].endswith('USDT') and float(t['quoteVolume']) >= 1_000_000
+        if t['symbol'].endswith('USDT') 
+        and float(t['quoteVolume']) >= 1_000_000
+        and float(t.get('bidPrice', 0)) > 0
     ]
     
     # Sort to find Top 10 Gainers and Top 10 Losers (24h change)
@@ -333,7 +335,14 @@ def main():
             thc_str = format_time(coin['thc'])
             p_str = format_price(curr_price)
             st_str = format_price(coin['st']) if coin['st'] else "N/A"
-            rev_tag = " 🔄 <b>Trend Reversed</b>" if coin.get('rev') else ""
+            # Determine Reversal Tag with "Colors" (Emojis)
+            rev_tag = ""
+            if coin.get('rev'):
+                if layer_key.startswith('gainer'):
+                    rev_tag = " 🟢 🔄 <b>Bullish Reversal</b>"
+                else:
+                    rev_tag = " 🔴 🔄 <b>Bearish Reversal</b>"
+            
             vol_zone = get_volume_zone(vol_usd)
             
             if layer_key == "gainer_l1":

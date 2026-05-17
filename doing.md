@@ -27,6 +27,8 @@
     - **Live Metrics**: Live Binance 24h Change % included.
     - **Corrected Timer**: 'Delist in' counts down from 72h (L2 only).
     - **Reliability Fix (v2.6)**: Automatically splits large reports into multiple Telegram messages to bypass the 4096-character limit.
+    - **Color-Coded Reversals (v2.7)**: Visual 🟢 Bullish / 🔴 Bearish tags for trend crossovers.
+    - **Delisted Filter (v2.8)**: Excludes suspended/delisted coins by requiring an active bid price (`bidPrice > 0`).
     - **External Trigger**: `repository_dispatch` (type: `trigger-binance`).
 3.  **Infrastructure**:
     - GitHub Gist for persistent state.
