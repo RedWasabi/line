@@ -26,6 +26,7 @@
     - **High-Precision UI**: Dynamic 8-decimal price formatting.
     - **Live Metrics**: Live Binance 24h Change % included.
     - **Corrected Timer**: 'Delist in' counts down from 72h (L2 only).
+    - **Reliability Fix (v2.6)**: Automatically splits large reports into multiple Telegram messages to bypass the 4096-character limit.
     - **External Trigger**: `repository_dispatch` (type: `trigger-binance`).
 3.  **Infrastructure**:
     - GitHub Gist for persistent state.

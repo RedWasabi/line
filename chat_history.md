@@ -145,3 +145,8 @@
     - **SEC Official Press Releases (Regulation):** Direct source for litigation and ETF approvals.
     - **CNBC Finance (Broad Macro):** Real-time tracking of traditional market sentiment and rate expectations.
 - **On-Chain & Whales Category:** Introduced a dedicated `[🐋 On-Chain & Whales]` analytical category to capitalize on the new Glassnode data.
+
+## 27. Reliability Fix: Message Length Management (Version 2.6)
+- **Bypassing Telegram Limits:** Resolved a critical failure where the bot stopped sending messages due to the 4096-character limit (Error 400).
+- **Sectional Message Splitting:** Refactored the reporting logic to send each major category (Gainer L1, L2, etc.) as a separate Telegram message. This ensures the bot can track an unlimited number of coins without ever exceeding the platform's constraints.
+- **Ordered Delivery:** Implemented a 1-second delay between sectional messages to ensure they appear in the correct order and avoid Telegram's anti-flood rate limits.
