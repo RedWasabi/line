@@ -76,6 +76,8 @@
     - **Binance Bot:** High-frequency, stateful price screening and recovery tracking.
 - Both systems are fully automated, persistent, secured, and triggered with minute-level accuracy.
 
+**Date:** Sunday, May 17, 2026
+
 ## 16. Advanced Price Tracking (Version 2)
 - **Logic Evolution:** Transitioned from static current-price snapshots to **"Persistent Session Watermarks"**.
 - **Merge-High/Merge-Low:** Updated `binance_bot.py` to continually merge the stored `hp`/`lp` with Binance's **24h High/Low ticker extremes** during every hourly run.
@@ -90,3 +92,23 @@
     - **Monospaced (Fixed-Width) Fonts** via `<code>` tags for prices to ensure numerical alignment.
     - **Italicized Insights** for sentiment and metadata.
 - **Handshake Protocol:** Documented the requirement for the user to initiate a `/start` command with each bot to enable message delivery.
+
+## 18. Algorithm Precision & UI Fixes (Version 2.1)
+- **Transition Continuity:** Resolved a logic flaw where coins would disappear from reports for one run during layer transitions (e.g., L1 -> L2). Implemented a two-pass processing model.
+- **Dynamic Price Formatting:** Added a smart formatter that automatically increases precision (up to 8 decimals) for low-priced assets like DENT or SHIB, preventing "0.0000" display errors.
+- **Live Market context:** Integrated the **Binance 24h Change %** directly into the reports, providing immediate verification that data is fresh even if session-based metrics (Inc/Drop) are stable.
+- **Timer Correction:** Fixed the "Delist in" logic to show time remaining (countdown from 72h) rather than time elapsed.
+
+## 19. Trend Crossovers & Quality Control (Version 2.2)
+- **Ultimate Reversal (Crossovers):** Implemented logic to allow coins to "cross over" between categories. If a coin in a Loser state becomes a Binance Top Gainer, it is automatically moved to Gainer L1 (and vice versa).
+- **Trend Labeling:** Added a visual **🔄 Trend Reversed** tag to the Telegram report to highlight these crossover events.
+- **Volume Quality Filter:** Implemented a mandatory **$1,000,000 USD** daily volume threshold. The bot now ignores illiquid "dead" coins, ensuring the Top 10 lists only contain meaningful market movers.
+- **Limitless L1 Monitoring:** Confirmed and optimized the L1 layers to track an unlimited number of coins as long as they maintain their primary trend, while keeping the 3-day (72h) cleanup timer strictly for the L2 recovery/dead-cat zones.
+
+## 20. Liquidity Zone Classification (Version 2.3)
+- **Visual Liquidity Context:** Added a multi-tier volume classification system to the Telegram reports to help the user identify coins susceptible to manipulation.
+- **Emoji-Based Tiering:**
+    - 🐟 **Retail:** $1M - $5M USD (High risk of single-whale manipulation).
+    - 🐬 **Healthy:** $5M - $20M USD (Sustainable retail/mid-cap activity).
+    - 🐳 **Institutional:** >$20M USD (Large market caps, high liquidity).
+- **Safety First:** Maintained the strict $1M minimum filter to completely eliminate the "Whale Danger Zone" (<$1M).
