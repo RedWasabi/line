@@ -14,7 +14,10 @@ RSS_FEEDS = [
     "https://www.federalreserve.gov/newsevents/press/all/2026all.xml", # Fed Press Releases (2026)
     "https://www.bls.gov/feed/bls_latest.rss",                        # US Bureau of Labor Statistics (CPI/Jobs)
     "https://www.coindesk.com/arc/outboundfeeds/rss/",                # Crypto Specialist (Regulation/Institutions)
-    "https://cointelegraph.com/rss"                                   # Crypto Market News
+    "https://cointelegraph.com/rss",                                  # Crypto Market News
+    "https://insights.glassnode.com/rss",                            # Glassnode Insights (On-chain/Whales)
+    "https://www.sec.gov/news/pressreleases.rss",                     # SEC Press Releases (Regulatory)
+    "https://search.cnbc.com/rs/search/combinedcms/view.xml?id=10000664" # CNBC Finance (Broad Macro)
 ]
 
 # Load environment variables
@@ -66,7 +69,8 @@ def summarize_market_news(news_items):
         "### REPORT STRUCTURE (MANDATORY):\n"
         "1. 📊 <b>สรุปภาวะตลาด (Executive Summary):</b>\n"
         "   - One powerful paragraph synthesizing the overall market mood and the most critical macro theme (e.g., Fed posture, inflation trajectory, institutional shifts).\n\n"
-        "2. <b>[Category Name] (e.g., 📌 Macro & Fed)</b>\n"
+        "2. <b>[Category Name]</b>\n"
+        "   - Use these categories: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].\n"
         "   - Use <blockquote>...</blockquote> for each news item under a category.\n"
         "   - Inside the blockquote: <b>[Headline]</b> followed by a deep analytical summary in Thai.\n"
         "   - Focus on *why* this matters for liquidity or capital flight.\n"

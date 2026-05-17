@@ -138,3 +138,10 @@
     - `<code>` tags for all quantitative data (prices, percentages, tickers) for high readability.
     - **Bold Entities** (e.g., Fed, BlackRock) for rapid scanning.
     - Optimized emoji-based structural layout.
+
+## 26. High-Impact Source Expansion (Version 2.1)
+- **Direct Intel Integration:** Added three high-signal RSS feeds to the News Bot to bypass secondary media filtering:
+    - **Glassnode Insights (On-Chain):** Direct data on whale movements, exchange flows, and network liquidity.
+    - **SEC Official Press Releases (Regulation):** Direct source for litigation and ETF approvals.
+    - **CNBC Finance (Broad Macro):** Real-time tracking of traditional market sentiment and rate expectations.
+- **On-Chain & Whales Category:** Introduced a dedicated `[🐋 On-Chain & Whales]` analytical category to capitalize on the new Glassnode data.

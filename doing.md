@@ -6,9 +6,11 @@
 ## 🟢 Completed Tasks
 1.  **Macro News Bot (`bot.py`)**:
     - Thai-language summaries via Groq (Llama 3.3 70B).
+    - **High-Impact Sources (v2.1)**: Integrated Glassnode (On-chain), SEC (Regulatory), and CNBC Finance (Macro).
     - **Executive Summary (v2)**: Added top-level TL;DR for market mood.
     - **Deep Insight (v2)**: Focus on 'Liquidity & Money Flow' and interest rate trajectory.
     - **Modern UI (v2)**: Enhanced formatting with blockquotes, monospace data (<code>), and rich emojis.
+    - **Analytics Categories**: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].
     - **Telegram Migration**: Unlimited messages via `TELEGRAM_BOT_TOKEN`.
     - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
