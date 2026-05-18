@@ -2,7 +2,7 @@ import os
 import time
 import feedparser
 import requests
-from groq import Groq
+from openai import OpenAI
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -21,7 +21,7 @@ RSS_FEEDS = [
 ]
 
 # Load environment variables
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
@@ -55,12 +55,15 @@ def get_aggregated_news(urls, limit_per_source=8):
     before_sleep=lambda retry_state: print(f"API busy or error. Retrying in {retry_state.next_action.sleep} seconds... (Attempt {retry_state.attempt_number})")
 )
 def summarize_market_news(news_items):
-    """Summarizes market-moving news using Groq with deep insight and modern HTML formatting."""
-    if not GROQ_API_KEY:
-        print("Error: GROQ_API_KEY environment variable is not set.")
+    """Summarizes market-moving news using OpenRouter with deep insight and modern HTML formatting."""
+    if not OPENROUTER_API_KEY:
+        print("Error: OPENROUTER_API_KEY environment variable is not set.")
         return None
     
-    client = Groq(api_key=GROQ_API_KEY)
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY,
+    )
     
     # Advanced V2 Prompt: Elite Analyst Persona + Modern UI Formatting
     prompt = (
@@ -87,7 +90,7 @@ def summarize_market_news(news_items):
         prompt += f"Source: {item['source']}\nTitle: {item['title']}\nSummary: {item['summary']}\n\n"
         
     completion = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openrouter/owl-alpha",
         messages=[
             {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. Always use HTML parse mode compatible tags: <b>, <i>, <code>, <u>, <a>, <s>, <blockquote>."},
             {"role": "user", "content": prompt}

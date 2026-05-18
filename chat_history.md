@@ -188,3 +188,9 @@
 - **Earlier Detection:** Coins now move to the Recovery (Gainer L2) or Dead Cat (Loser L2) layers significantly faster after a pullback or bounce, providing earlier signals for trend exhaustion or reversal.
 - **Symmetric Logic:** Applied the update to both Gainers (Drop check) and Losers (Bounce check) to maintain algorithmic balance.
 
+## 34. Intelligence Migration: OpenRouter (v2.3)
+- **Engine Switch:** Migrated the News Bot from Groq to **OpenRouter** to leverage a wider variety of models.
+- **Advanced Model:** Updated the bot to use **`openrouter/owl-alpha`**, improving analytical depth and reasoning for market intelligence.
+- **SDK Update:** Replaced the `groq` library with the OpenAI-compatible `openai` SDK, ensuring broader compatibility with modern AI providers.
+- **Workflow Synchronization:** Updated GitHub Action secrets and environment mappings to use `OPENROUTER_API_KEY`.
+

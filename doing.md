@@ -5,7 +5,8 @@
 
 ## 🟢 Completed Tasks
 1.  **Macro News Bot (`bot.py`)**:
-    - Thai-language summaries via Groq (Llama 3.3 70B).
+    - **OpenRouter Integration (v2.3)**: Migrated from Groq to OpenRouter using the `openrouter/owl-alpha` model for enhanced market analysis.
+    - Thai-language summaries via OpenRouter.
     - **High-Impact Sources (v2.1)**: Integrated Glassnode (On-chain), SEC (Regulatory), and CNBC Finance (Macro).
     - **Executive Summary (v2)**: Added top-level TL;DR for market mood.
     - **Deep Insight (v2)**: Focus on 'Liquidity & Money Flow' and interest rate trajectory.
