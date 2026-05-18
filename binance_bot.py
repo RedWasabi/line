@@ -30,8 +30,9 @@ def load_state():
             gist_data = response.json()
             content = gist_data['files']['watchlist.json']['content']
             data = json.loads(content)
-            # Basic schema check: ensure items have 'layer' key. If not, reset to avoid crashes.
-            if data and not all('layer' in v for v in data.values() if isinstance(v, dict)):
+            # Basic schema check: ensure coin items have 'layer' key. Ignore metadata.
+            coin_values = [v for k, v in data.items() if k != '_metadata' and isinstance(v, dict)]
+            if data and coin_values and not all('layer' in v for v in coin_values):
                 print("Old schema detected. Resetting state for 4-layer logic.")
                 return {}
             return data
