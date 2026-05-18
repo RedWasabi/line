@@ -101,47 +101,83 @@ def summarize_market_news(news_items):
     return completion.choices[0].message.content
 
 def send_telegram_message(text):
-    """Sends the summarized text to Telegram, splitting if it exceeds the 4,096 character limit."""
+    """Sends the summarized text to Telegram, splitting if it exceeds the 4,096 character limit.
+    Ensures HTML tags are properly closed and reopened across parts.
+    """
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Error: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variable is not set.")
         return False
         
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    
-    # Telegram limit is 4096. Use 4000 for safety.
     MAX_LEN = 4000
     
-    if len(text) <= MAX_LEN:
-        parts = [text]
-    else:
-        # Split into parts at double newlines to avoid breaking HTML blocks (like blockquotes)
-        parts = []
-        remaining_text = text
-        while len(remaining_text) > MAX_LEN:
-            # Try to find the last double newline within the limit
-            split_idx = remaining_text.rfind("\n\n", 0, MAX_LEN)
-            if split_idx == -1:
-                # Fallback to single newline
-                split_idx = remaining_text.rfind("\n", 0, MAX_LEN)
-            if split_idx == -1:
-                # Absolute fallback: hard cut
-                split_idx = MAX_LEN
-            
-            parts.append(remaining_text[:split_idx].strip())
-            remaining_text = remaining_text[split_idx:].strip()
+    def get_open_tags(html_part):
+        """Helper to find unclosed tags in a string."""
+        tags = ["b", "i", "code", "blockquote"]
+        open_tags = []
+        import re
+        # Find all tags
+        all_tags = re.findall(r"<(/?)(b|i|code|blockquote)>", html_part)
+        for is_closing, tag_name in all_tags:
+            if is_closing:
+                if open_tags and open_tags[-1] == tag_name:
+                    open_tags.pop()
+            else:
+                open_tags.append(tag_name)
+        return open_tags
+
+    parts = []
+    remaining_text = text
+    active_tags = []
+
+    while len(remaining_text) > MAX_LEN or active_tags:
+        # Determine the chunk size. Leave room for closing/opening tags.
+        # Estimate: each tag needs 10-15 chars for closing/opening.
+        buffer = 150 # Safety buffer for tags and page indicators
+        limit = MAX_LEN - buffer
         
-        if remaining_text:
+        if len(remaining_text) <= limit and not active_tags:
             parts.append(remaining_text)
+            break
+            
+        # Find a good split point
+        split_idx = remaining_text.rfind("\n\n", 0, limit)
+        if split_idx == -1:
+            split_idx = remaining_text.rfind("\n", 0, limit)
+        if split_idx == -1:
+            split_idx = limit
+            
+        current_chunk = remaining_text[:split_idx]
+        
+        # Balance tags for this chunk
+        new_open_tags = get_open_tags(current_chunk)
+        
+        # Final text for this part starts with current active tags from previous part
+        prefix = "".join([f"<{t}>" for t in active_tags])
+        
+        # Tags that need to be closed at the end of this chunk
+        all_active_now = active_tags + new_open_tags
+        suffix = "".join([f"</{t}>" for t in reversed(all_active_now)])
+        
+        parts.append(prefix + current_chunk + suffix)
+        
+        # Prepare for next loop
+        remaining_text = remaining_text[split_idx:].strip()
+        active_tags = all_active_now
+        
+        # If we have no remaining text but active tags (shouldn't happen with good LLM), break
+        if not remaining_text:
+            break
+
+    # If the loop finished and there's still a tiny bit of text left
+    if remaining_text:
+        prefix = "".join([f"<{t}>" for t in active_tags])
+        parts.append(prefix + remaining_text)
 
     success = True
     for i, part in enumerate(parts):
-        # Optional: Add a continuation indicator if split
-        current_text = part
-        if len(parts) > 1:
-            page_indicator = f" (หน้า {i+1}/{len(parts)})"
-            # Try to append if it doesn't push it over the limit again
-            if len(current_text) + len(page_indicator) < 4096:
-                current_text += page_indicator
+        page_indicator = f" (หน้า {i+1}/{len(parts)})"
+        current_text = part + page_indicator
 
         payload = {
             "chat_id": TELEGRAM_CHAT_ID,
@@ -154,8 +190,9 @@ def send_telegram_message(text):
                 print(f"Telegram part {i+1} sent successfully.")
             else:
                 print(f"Telegram API Error (Part {i+1}): {response.status_code} {response.text}")
+                # Log the failing part for debugging (truncated)
+                print(f"Content Sample: {current_text[:100]}...{current_text[-100:]}")
                 success = False
-            # Small delay between parts to maintain order and avoid rate limits
             if len(parts) > 1:
                 time.sleep(1.5)
         except Exception as e:
