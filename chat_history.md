@@ -194,3 +194,8 @@
 - **SDK Update:** Replaced the `groq` library with the OpenAI-compatible `openai` SDK, ensuring broader compatibility with modern AI providers.
 - **Workflow Synchronization:** Updated GitHub Action secrets and environment mappings to use `OPENROUTER_API_KEY`.
 
+## 35. Parsing & Performance Optimization (v2.4)
+- **HTML Sanitization:** Fixed a critical bug where the `openrouter/owl-alpha` model generated unsupported `<br>` tags, leading to Telegram delivery failures. Added post-processing to replace these with standard newlines.
+- **Strict Tag Enforcement:** Updated the system prompt to explicitly restrict the model to Telegram-compatible HTML tags (`<b>`, `<i>`, `<code>`, `<blockquote>`).
+- **Performance Capping:** Limited the news analysis to a maximum of 20 items. This significantly reduces latency and ensures the script completes well within GitHub Action time limits, even with complex analytical models.
+

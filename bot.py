@@ -92,7 +92,7 @@ def summarize_market_news(news_items):
     completion = client.chat.completions.create(
         model="openrouter/owl-alpha",
         messages=[
-            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. Always use HTML parse mode compatible tags: <b>, <i>, <code>, <u>, <a>, <s>, <blockquote>."},
+            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>, <blockquote>. NEVER use <br>, <p>, or <div>. Use newlines (\n) for line breaks."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.4,
@@ -168,19 +168,28 @@ def main():
     print("Starting Crypto Intelligence Upgrade Bot...")
     
     # 1. Scrape aggregated news from Macro and Crypto sources
-    news_items = get_aggregated_news(RSS_FEEDS)
+    # Limit per source to 5 to keep the total manageable
+    news_items = get_aggregated_news(RSS_FEEDS, limit_per_source=5)
     
     if not news_items:
         print("No news items retrieved from any source. Exiting.")
         return
+    
+    # Cap total news items at 20 to ensure performance and prevent token overflow
+    if len(news_items) > 20:
+        print(f"Capping news items from {len(news_items)} to 20 for optimal analysis.")
+        news_items = news_items[:20]
         
-    # 2. Categorize and Analyze with Gemini
+    # 2. Categorize and Analyze with OpenRouter
     print(f"Analyzing {len(news_items)} news items for market impact...")
     summary_text = summarize_market_news(news_items)
     
     if not summary_text:
         print("Failed to generate intelligence report. Exiting.")
         return
+
+    # Post-processing: Remove unsupported HTML tags like <br> which cause Telegram 400 errors
+    summary_text = summary_text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
         
     # 3. Send to Telegram
     print("Sending categorized intelligence report to Telegram...")

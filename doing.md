@@ -6,6 +6,9 @@
 ## 🟢 Completed Tasks
 1.  **Macro News Bot (`bot.py`)**:
     - **OpenRouter Integration (v2.3)**: Migrated from Groq to OpenRouter using the `openrouter/owl-alpha` model for enhanced market analysis.
+    - **Parsing & Performance Fix (v2.4)**:
+        - Implemented strict HTML sanitization to strip unsupported `<br>` tags that caused Telegram delivery failures.
+        - Optimized performance by capping analysis to the top 20 most relevant news items, reducing latency and GitHub Action execution time.
     - Thai-language summaries via OpenRouter.
     - **High-Impact Sources (v2.1)**: Integrated Glassnode (On-chain), SEC (Regulatory), and CNBC Finance (Macro).
     - **Executive Summary (v2)**: Added top-level TL;DR for market mood.
