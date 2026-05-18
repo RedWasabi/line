@@ -74,10 +74,11 @@ def summarize_market_news(news_items):
         "   - One powerful paragraph synthesizing the overall market mood and the most critical macro theme (e.g., Fed posture, inflation trajectory, institutional shifts).\n\n"
         "2. <b>[Category Name]</b>\n"
         "   - Use these categories: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].\n"
-        "   - Use <blockquote>...</blockquote> for each news item under a category.\n"
-        "   - Inside the blockquote: <b>[Headline]</b> followed by a deep analytical summary in Thai.\n"
+        "   - Format each news item as: 📰 <b>[Headline]</b>\n"
+        "   - Followed by a deep analytical summary in Thai.\n"
         "   - Focus on *why* this matters for liquidity or capital flight.\n"
-        "   - Use <i>Impact:</i> [Bullish/Bearish/Neutral] + brief reason.\n\n"
+        "   - Use <i>Impact:</i> [Bullish/Bearish/Neutral] + brief reason.\n"
+        "   - Separate individual news items with double newlines (\\n\\n).\n\n"
         "### FORMATTING RULES (STRICT):\n"
         "- Use <b>...</b> for bold headers and key entities (e.g., <b>Fed</b>, <b>BlackRock</b>).\n"
         "- ALWAYS wrap all numbers, percentages, dates, and asset tickers in <code>...</code> tags (e.g., <code>$65,000</code>, <code>+3.4%</code>, <code>BTC</code>).\n"
@@ -92,7 +93,7 @@ def summarize_market_news(news_items):
     completion = client.chat.completions.create(
         model="openrouter/owl-alpha",
         messages=[
-            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>, <blockquote>. NEVER use <br>, <p>, or <div>. Use newlines (\n) for line breaks."},
+            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>. NEVER use <blockquote>, <br>, <p>, or <div>. Use newlines (\\n) for line breaks."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.4,
@@ -116,7 +117,7 @@ def send_telegram_message(text):
         stack = list(current_stack)
         import re
         # Find all tags (opening or closing)
-        all_tags = re.findall(r"<(/?)(b|i|code|blockquote)>", html_chunk)
+        all_tags = re.findall(r"<(/?)(b|i|code)>", html_chunk)
         for is_closing, tag_name in all_tags:
             if is_closing:
                 # If we see a closing tag, pop it from the stack if it matches the top

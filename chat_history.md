@@ -199,3 +199,9 @@
 - **Strict Tag Enforcement:** Updated the system prompt to explicitly restrict the model to Telegram-compatible HTML tags (`<b>`, `<i>`, `<code>`, `<blockquote>`).
 - **Performance Capping:** Limited the news analysis to a maximum of 20 items. This significantly reduces latency and ensures the script completes well within GitHub Action time limits, even with complex analytical models.
 
+## 36. UI Redesign: Emoji Card Style (v2.7)
+- **Aesthetic Overhaul:** Transitioned from the problematic `<blockquote>` block style to a cleaner **Emoji Card Style** using `📰 <b>[Headline]</b>`.
+- **Simplification:** Completely removed the `<blockquote>` tag from the bot's vocabulary. This eliminates the "tag accumulation" bug where multiple pages of a report would accidentally merge into one massive block.
+- **Improved Scannability:** The new layout uses double newlines and structural emojis to make the intelligence report easier to read on mobile devices.
+- **Splitter Optimization:** Simplified the smart splitting logic to no longer track or balance blockquotes, reducing the risk of HTML parsing errors.
+
