@@ -188,7 +188,11 @@
 - **Earlier Detection:** Coins now move to the Recovery (Gainer L2) or Dead Cat (Loser L2) layers significantly faster after a pullback or bounce, providing earlier signals for trend exhaustion or reversal.
 - **Symmetric Logic:** Applied the update to both Gainers (Drop check) and Losers (Bounce check) to maintain algorithmic balance.
 
-## 34. Intelligence Migration: OpenRouter (v2.3)
+## 34. Persistence & Reporting Reliability (v3.2 - v3.3)
+- **Schema Validation Fix (v3.2):** Resolved a critical bug in `load_state` where the bot's metadata was being incorrectly identified as an "old schema," leading to state resets on every run.
+- **Global Tick Cycle (v3.3):** Optimized the global tick counter to reset to `0` after every 4th run (1 hour). This keeps the state metadata clean and prevents the counter from growing indefinitely.
+
+## 35. Intelligence Migration: OpenRouter (v2.3)
 - **Engine Switch:** Migrated the News Bot from Groq to **OpenRouter** to leverage a wider variety of models.
 - **Advanced Model:** Updated the bot to use **`openrouter/owl-alpha`**, improving analytical depth and reasoning for market intelligence.
 - **SDK Update:** Replaced the `groq` library with the OpenAI-compatible `openai` SDK, ensuring broader compatibility with modern AI providers.

@@ -22,6 +22,8 @@
     - **Reliability Fix (v2.2)**: Implemented automated multi-part delivery with "(หน้า x/y)" page indicators for long AI summaries.
     - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
+    - **Global Tick Reset (v3.3)**: Optimized state metadata to reset the report cycle counter back to 0 after every 4th run, keeping the Gist data clean.
+    - **Persistence Fix (v3.2)**: Resolved a critical bug where the schema validation check incorrectly reset the bot's state on every run.
     - **Tightened Transitions (v3.1)**: Lowered the L1 -> L2 transition threshold from 15% to **10%** for both Gainers (Drop check) and Losers (Bounce check) to improve responsiveness.
     - **15-Minute Precision (v3.0)**: Upgraded to fetch data every 15 minutes while maintaining consolidated hourly Telegram reports.
     - **Intra-tick Spike Detection**: Uses 15m Klines for 4x better responsiveness to pumps and dumps.
