@@ -272,9 +272,9 @@ def main():
             obs_high = max(curr_price, k_high) if k_high else curr_price
             coin['hp'] = max(coin['hp'], obs_high)
             
-            # Check for 15% Drop -> Move to L2 (Recovery)
+            # Check for 10% Drop -> Move to L2 (Recovery)
             drop_check = (coin['hp'] - curr_price) / coin['hp'] * 100
-            if drop_check > 15 and coin['thc'] > 0:
+            if drop_check > 10 and coin['thc'] > 0:
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
                 
         elif current_layer == "gainer_l2":
@@ -296,9 +296,9 @@ def main():
             obs_low = min(curr_price, k_low) if k_low else curr_price
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
             
-            # Check for 15% Bounce -> Move to L2 (Dead Cat)
+            # Check for 10% Bounce -> Move to L2 (Dead Cat)
             bounce_check = (curr_price - coin['lp']) / coin['lp'] * 100
-            if bounce_check > 15 and coin['thc'] > 0:
+            if bounce_check > 10 and coin['thc'] > 0:
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
 
         elif current_layer == "loser_l2":

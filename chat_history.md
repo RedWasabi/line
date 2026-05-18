@@ -183,3 +183,8 @@
 - **Recalibrated Time Engine:** Updated `thc` (Total Tick Count) and `hc` (Layer Tick Count) to work with the higher frequency. The delist timer was recalibrated from 72 runs (hours) to **288 runs (15m ticks)**.
 - **Improved Time UI:** The report now displays granular time tracking (e.g., `2h 15m`) for trends younger than 24 hours.
 
+## 33. Sensitivity Tuning (v3.1)
+- **Aggressive Transitions:** Tightened the L1 -> L2 threshold from 15% to **10%**.
+- **Earlier Detection:** Coins now move to the Recovery (Gainer L2) or Dead Cat (Loser L2) layers significantly faster after a pullback or bounce, providing earlier signals for trend exhaustion or reversal.
+- **Symmetric Logic:** Applied the update to both Gainers (Drop check) and Losers (Bounce check) to maintain algorithmic balance.
+
