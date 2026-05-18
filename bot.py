@@ -102,7 +102,7 @@ def summarize_market_news(news_items):
 
 def send_telegram_message(text):
     """Sends the summarized text to Telegram, splitting if it exceeds the 4,096 character limit.
-    Ensures HTML tags are properly closed and reopened across parts.
+    Ensures HTML tags are properly closed and reopened across parts by maintaining a tag stack.
     """
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Error: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variable is not set.")
@@ -111,68 +111,58 @@ def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     MAX_LEN = 4000
     
-    def get_open_tags(html_part):
-        """Helper to find unclosed tags in a string."""
-        tags = ["b", "i", "code", "blockquote"]
-        open_tags = []
+    def update_tag_stack(current_stack, html_chunk):
+        """Updates the tag stack based on tags found in the chunk."""
+        stack = list(current_stack)
         import re
-        # Find all tags
-        all_tags = re.findall(r"<(/?)(b|i|code|blockquote)>", html_part)
+        # Find all tags (opening or closing)
+        all_tags = re.findall(r"<(/?)(b|i|code|blockquote)>", html_chunk)
         for is_closing, tag_name in all_tags:
             if is_closing:
-                if open_tags and open_tags[-1] == tag_name:
-                    open_tags.pop()
+                # If we see a closing tag, pop it from the stack if it matches the top
+                if stack and stack[-1] == tag_name:
+                    stack.pop()
             else:
-                open_tags.append(tag_name)
-        return open_tags
+                # If we see an opening tag, push it onto the stack
+                stack.append(tag_name)
+        return stack
 
     parts = []
     remaining_text = text
-    active_tags = []
+    active_stack = []
 
-    while len(remaining_text) > MAX_LEN or active_tags:
-        # Determine the chunk size. Leave room for closing/opening tags.
-        # Estimate: each tag needs 10-15 chars for closing/opening.
-        buffer = 150 # Safety buffer for tags and page indicators
-        limit = MAX_LEN - buffer
+    while len(remaining_text) > 0:
+        # Buffer for pagination indicators and tags
+        limit = MAX_LEN - 150
         
-        if len(remaining_text) <= limit and not active_tags:
+        if len(remaining_text) <= limit and not active_stack:
             parts.append(remaining_text)
             break
             
-        # Find a good split point
+        # Find a split point (double newline preferred)
         split_idx = remaining_text.rfind("\n\n", 0, limit)
         if split_idx == -1:
             split_idx = remaining_text.rfind("\n", 0, limit)
         if split_idx == -1:
-            split_idx = limit
+            split_idx = min(limit, len(remaining_text))
             
         current_chunk = remaining_text[:split_idx]
         
-        # Balance tags for this chunk
-        new_open_tags = get_open_tags(current_chunk)
+        # Calculate what the stack will look like AFTER this chunk
+        next_stack = update_tag_stack(active_stack, current_chunk)
         
-        # Final text for this part starts with current active tags from previous part
-        prefix = "".join([f"<{t}>" for t in active_tags])
-        
-        # Tags that need to be closed at the end of this chunk
-        all_active_now = active_tags + new_open_tags
-        suffix = "".join([f"</{t}>" for t in reversed(all_active_now)])
+        # Wrap the chunk: 
+        # 1. Opening tags from previous parts
+        # 2. The actual chunk content
+        # 3. Closing tags that remain open after this chunk
+        prefix = "".join([f"<{t}>" for t in active_stack])
+        suffix = "".join([f"</{t}>" for t in reversed(next_stack)])
         
         parts.append(prefix + current_chunk + suffix)
         
-        # Prepare for next loop
+        # Advance
         remaining_text = remaining_text[split_idx:].strip()
-        active_tags = all_active_now
-        
-        # If we have no remaining text but active tags (shouldn't happen with good LLM), break
-        if not remaining_text:
-            break
-
-    # If the loop finished and there's still a tiny bit of text left
-    if remaining_text:
-        prefix = "".join([f"<{t}>" for t in active_tags])
-        parts.append(prefix + remaining_text)
+        active_stack = next_stack
 
     success = True
     for i, part in enumerate(parts):
@@ -190,8 +180,6 @@ def send_telegram_message(text):
                 print(f"Telegram part {i+1} sent successfully.")
             else:
                 print(f"Telegram API Error (Part {i+1}): {response.status_code} {response.text}")
-                # Log the failing part for debugging (truncated)
-                print(f"Content Sample: {current_text[:100]}...{current_text[-100:]}")
                 success = False
             if len(parts) > 1:
                 time.sleep(1.5)
