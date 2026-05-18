@@ -174,6 +174,8 @@ def main():
     metadata['tick'] += 1
     # Send Telegram every 4th run (1 hour)
     should_send = (metadata['tick'] % 4 == 0)
+    if should_send:
+        metadata['tick'] = 0  # Reset to 0 after reporting to keep it clean
     print(f"Run Tick: {metadata['tick']} | Should send report: {should_send}")
     
     # Global Increment: Initialize 'thc' if missing, then increment for all existing coins
