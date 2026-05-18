@@ -9,6 +9,10 @@
     - **Parsing & Performance Fix (v2.4)**:
         - Implemented strict HTML sanitization to strip unsupported `<br>` tags that caused Telegram delivery failures.
         - Optimized performance by capping analysis to the top 20 most relevant news items, reducing latency and GitHub Action execution time.
+    - **Typography & Formatting Polish (v2.8)**:
+        - Fixed a bug where literal `\n` characters were displayed in Telegram.
+        - Improved readability by restricting `<code>` tags to quantities and tickers, preventing the "small word" effect on mobile.
+        - Refined the layout with bold headers and optimized spacing.
     - **Emoji Card Style UI (v2.7)**:
         - Redesigned the report aesthetic to use a clean emoji-based layout (`📰 Headline`).
         - Completely removed the `<blockquote>` tag to eliminate nested formatting issues and improve cross-page delivery reliability.

@@ -209,3 +209,8 @@
 - **Improved Scannability:** The new layout uses double newlines and structural emojis to make the intelligence report easier to read on mobile devices.
 - **Splitter Optimization:** Simplified the smart splitting logic to no longer track or balance blockquotes, reducing the risk of HTML parsing errors.
 
+## 37. Typography & Formatting Polish (v2.8)
+- **Newline Cleanup:** Fixed a bug where the bot displayed literal `\n` characters instead of real line breaks. Added double-layered protection: clearer LLM instructions and a Python `.replace()` safety net.
+- **Readability Enhancement:** Addressed the "small word" issue by restricting fixed-width `<code>` tags to price values and tickers only. Standard text now uses the device's default font for significantly better readability.
+- **Visual Spacing:** Refined the Emoji Card layout with bold headers and consistent blank lines between news items to improve mobile scannability.
+

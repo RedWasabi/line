@@ -71,17 +71,17 @@ def summarize_market_news(news_items):
         "Your goal is to connect news events to 'Liquidity & Money Flow' and interest rate expectations.\n\n"
         "### REPORT STRUCTURE (MANDATORY):\n"
         "1. 📊 <b>สรุปภาวะตลาด (Executive Summary):</b>\n"
-        "   - One powerful paragraph synthesizing the overall market mood and the most critical macro theme (e.g., Fed posture, inflation trajectory, institutional shifts).\n\n"
+        "   - One powerful paragraph synthesizing the overall market mood and the most critical macro theme.\n\n"
         "2. <b>[Category Name]</b>\n"
         "   - Use these categories: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].\n"
-        "   - Format each news item as: 📰 <b>[Headline]</b>\n"
-        "   - Followed by a deep analytical summary in Thai.\n"
-        "   - Focus on *why* this matters for liquidity or capital flight.\n"
-        "   - Use <i>Impact:</i> [Bullish/Bearish/Neutral] + brief reason.\n"
-        "   - Separate individual news items with double newlines (\\n\\n).\n\n"
+        "   - Format each news item as:\n"
+        "     📰 <b>[Headline]</b>\n"
+        "     [Deep analytical summary in Thai]\n"
+        "     <b>Impact:</b> [Bullish/Bearish/Neutral] + brief reason.\n"
+        "   - Separate individual news items with a blank line.\n\n"
         "### FORMATTING RULES (STRICT):\n"
-        "- Use <b>...</b> for bold headers and key entities (e.g., <b>Fed</b>, <b>BlackRock</b>).\n"
-        "- ALWAYS wrap all numbers, percentages, dates, and asset tickers in <code>...</code> tags (e.g., <code>$65,000</code>, <code>+3.4%</code>, <code>BTC</code>).\n"
+        "- Use <b>...</b> for bold headers and important entities (e.g., <b>Fed</b>, <b>BlackRock</b>).\n"
+        "- Use <code>...</code> tags ONLY for price values or short tickers (e.g., <code>$65,000</code>, <code>BTC</code>). Do NOT use it for long sentences.\n"
         "- Use structural emojis for professional visual scanning.\n"
         "- If a category has no relevant news, write: 'ไม่มีความเคลื่อนไหวสำคัญในหมวดหมู่นี้'\n\n"
         "--- NEWS DATA ---\n"
@@ -93,7 +93,7 @@ def summarize_market_news(news_items):
     completion = client.chat.completions.create(
         model="openrouter/owl-alpha",
         messages=[
-            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>. NEVER use <blockquote>, <br>, <p>, or <div>. Use newlines (\\n) for line breaks."},
+            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>. NEVER use <blockquote>, <br>, <p>, or <div>. Output ACTUAL newlines, not the literal character \\n."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.4,
@@ -214,8 +214,11 @@ def main():
         print("Failed to generate intelligence report. Exiting.")
         return
 
-    # Post-processing: Remove unsupported HTML tags like <br> which cause Telegram 400 errors
+    # Post-processing: 
+    # 1. Remove unsupported HTML tags like <br> which cause Telegram 400 errors
     summary_text = summary_text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    # 2. Fix potential literal \n characters from LLM
+    summary_text = summary_text.replace("\\n", "\n")
         
     # 3. Send to Telegram
     print("Sending categorized intelligence report to Telegram...")
