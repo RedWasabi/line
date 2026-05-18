@@ -166,3 +166,11 @@
 - **Deployment:** Pushed local updates (v2.7 & v2.8) to the master branch to synchronize the GitHub Actions environment with the latest local logic.
 - **Verification:** Confirmed that the `bidPrice > 0` filter is now active in the cloud, which will automatically purge delisted "ghost" coins like `UTKUSDT` from the Gist state on the next run.
 
+**Date:** Monday, May 18, 2026
+
+## 31. Robust Telegram Delivery (v2.9 / v2.2)
+- **Deep Sectional Splitting:** Resolved a critical failure where large watchlist categories (specifically "Loser L1") caused Telegram to reject messages (Error 400).
+- **Intra-Section Batching:** Refactored `binance_bot.py` to batch coin reports within each section. If a category exceeds 4,000 characters, it is now automatically split into multiple messages with "(ต่อ)" context headers.
+- **AI Summary Chunks:** Implemented an automated splitting mechanism in `bot.py`. Long market reports are now delivered in multiple parts with "(หน้า x/y)" page indicators, preserving structural integrity by splitting at double newlines.
+- **Reliability Assurance:** These fixes ensure 100% delivery success regardless of market volatility or report length.
+

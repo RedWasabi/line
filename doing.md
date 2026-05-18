@@ -1,6 +1,6 @@
 # Project Status: Crypto Intelligence & Binance Watchlist Bot
 
-**Date:** Sunday, May 17, 2026
+**Date:** Monday, May 18, 2026
 **Status:** ✅ Dual-Bot Architecture Fully Operational
 
 ## 🟢 Completed Tasks
@@ -12,6 +12,7 @@
     - **Modern UI (v2)**: Enhanced formatting with blockquotes, monospace data (<code>), and rich emojis.
     - **Analytics Categories**: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].
     - **Telegram Migration**: Unlimited messages via `TELEGRAM_BOT_TOKEN`.
+    - **Reliability Fix (v2.2)**: Implemented automated multi-part delivery with "(หน้า x/y)" page indicators for long AI summaries.
     - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
@@ -26,7 +27,7 @@
     - **High-Precision UI**: Dynamic 8-decimal price formatting.
     - **Live Metrics**: Live Binance 24h Change % included.
     - **Corrected Timer**: 'Delist in' counts down from 72h (L2 only).
-    - **Reliability Fix (v2.6)**: Automatically splits large reports into multiple Telegram messages to bypass the 4096-character limit.
+    - **Reliability Fix (v2.9)**: Enhanced sectional splitting. If a single layer (e.g., Loser L1) exceeds the character limit, it is automatically broken into multiple messages with "(ต่อ)" context tags.
     - **Color-Coded Reversals (v2.7)**: Visual 🟢 Bullish / 🔴 Bearish tags for trend crossovers.
     - **Delisted Filter (v2.8)**: Excludes suspended/delisted coins by requiring an active bid price (`bidPrice > 0`).
     - **External Trigger**: `repository_dispatch` (type: `trigger-binance`).

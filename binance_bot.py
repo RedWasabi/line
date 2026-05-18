@@ -392,7 +392,7 @@ def main():
                     f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
                 )
 
-    # 5. Format & Send Telegram Messages (Section by Section to avoid Length Limit)
+    # 5. Format & Send Telegram Messages (Section by Section with intra-section splitting)
     header = "📊 <b>Binance Screening Report</b>"
     
     sections = [
@@ -402,24 +402,38 @@ def main():
         ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
     ]
     
-    first_message = True
+    first_section = True
     for title, key in sections:
-        if final_report_strings[key]:
-            # For the very first section, include the header
-            msg_parts = []
-            if first_message:
-                msg_parts.append(header)
-                first_message = False
+        items = final_report_strings[key]
+        if not items:
+            continue
             
-            msg_parts.append(f"\n{title}")
-            msg_parts.extend(final_report_strings[key])
-            
-            # Send this section
-            send_telegram_message("\n".join(msg_parts))
-            # Small sleep to ensure order and avoid Telegram flood limits
+        current_msg = ""
+        # Add the global header only to the very first message sent
+        if first_section:
+            current_msg += header + "\n"
+            first_section = False
+        
+        current_msg += f"\n{title}\n"
+        
+        for item in items:
+            # Check if adding this item (plus a newline) would exceed the Telegram limit
+            # Using 4000 to be safe (limit is 4096)
+            if len(current_msg) + len(item) + 2 > 4000:
+                # Send what we have so far
+                send_telegram_message(current_msg.strip())
+                time.sleep(1)
+                # Start new message with the section title as context
+                current_msg = f"{title} (ต่อ)\n\n{item}\n"
+            else:
+                current_msg += item + "\n"
+        
+        # Send the remaining part of the section
+        if current_msg:
+            send_telegram_message(current_msg.strip())
             time.sleep(1)
 
-    if first_message:
+    if first_section:
         print("No active coins to report.")
 
     # 6. Save State

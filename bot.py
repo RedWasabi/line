@@ -98,28 +98,68 @@ def summarize_market_news(news_items):
     return completion.choices[0].message.content
 
 def send_telegram_message(text):
-    """Sends the summarized text to Telegram."""
+    """Sends the summarized text to Telegram, splitting if it exceeds the 4,096 character limit."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Error: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variable is not set.")
         return False
         
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": text,
-        "parse_mode": "HTML"
-    }
-    try:
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            print("Categorized market analysis sent successfully via Telegram.")
-            return True
-        else:
-            print(f"Telegram API Error: {response.status_code} {response.text}")
-            return False
-    except Exception as e:
-        print(f"Error sending Telegram message: {e}")
-        return False
+    
+    # Telegram limit is 4096. Use 4000 for safety.
+    MAX_LEN = 4000
+    
+    if len(text) <= MAX_LEN:
+        parts = [text]
+    else:
+        # Split into parts at double newlines to avoid breaking HTML blocks (like blockquotes)
+        parts = []
+        remaining_text = text
+        while len(remaining_text) > MAX_LEN:
+            # Try to find the last double newline within the limit
+            split_idx = remaining_text.rfind("\n\n", 0, MAX_LEN)
+            if split_idx == -1:
+                # Fallback to single newline
+                split_idx = remaining_text.rfind("\n", 0, MAX_LEN)
+            if split_idx == -1:
+                # Absolute fallback: hard cut
+                split_idx = MAX_LEN
+            
+            parts.append(remaining_text[:split_idx].strip())
+            remaining_text = remaining_text[split_idx:].strip()
+        
+        if remaining_text:
+            parts.append(remaining_text)
+
+    success = True
+    for i, part in enumerate(parts):
+        # Optional: Add a continuation indicator if split
+        current_text = part
+        if len(parts) > 1:
+            page_indicator = f" (หน้า {i+1}/{len(parts)})"
+            # Try to append if it doesn't push it over the limit again
+            if len(current_text) + len(page_indicator) < 4096:
+                current_text += page_indicator
+
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": current_text,
+            "parse_mode": "HTML"
+        }
+        try:
+            response = requests.post(url, json=payload)
+            if response.status_code == 200:
+                print(f"Telegram part {i+1} sent successfully.")
+            else:
+                print(f"Telegram API Error (Part {i+1}): {response.status_code} {response.text}")
+                success = False
+            # Small delay between parts to maintain order and avoid rate limits
+            if len(parts) > 1:
+                time.sleep(1.5)
+        except Exception as e:
+            print(f"Error sending Telegram part {i+1}: {e}")
+            success = False
+            
+    return success
 
 def main():
     print("Starting Crypto Intelligence Upgrade Bot...")
