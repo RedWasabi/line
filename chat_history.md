@@ -174,3 +174,12 @@
 - **AI Summary Chunks:** Implemented an automated splitting mechanism in `bot.py`. Long market reports are now delivered in multiple parts with "(หน้า x/y)" page indicators, preserving structural integrity by splitting at double newlines.
 - **Reliability Assurance:** These fixes ensure 100% delivery success regardless of market volatility or report length.
 
+**Date:** Monday, May 18, 2026 (Continued)
+
+## 32. 15-Minute Precision Upgrade (v3.0)
+- **High-Frequency Monitoring:** Transitioned the bot from 1-hour to **15-minute polling** to achieve 4x better responsiveness to market moves.
+- **Intra-tick Spike Detection:** Refactored the watermarking engine to fetch **15m Klines** instead of 1h. The bot now captures rapid spikes and dips that happen within 15-minute windows.
+- **Global Tick Orchestration:** Implemented a global tick counter in the Gist metadata. This allows the bot to run every 15 minutes but only send the heavy Telegram reports **every 4th run (exactly 1 hour)**.
+- **Recalibrated Time Engine:** Updated `thc` (Total Tick Count) and `hc` (Layer Tick Count) to work with the higher frequency. The delist timer was recalibrated from 72 runs (hours) to **288 runs (15m ticks)**.
+- **Improved Time UI:** The report now displays granular time tracking (e.g., `2h 15m`) for trends younger than 24 hours.
+

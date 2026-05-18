@@ -31,7 +31,7 @@ def load_state():
             content = gist_data['files']['watchlist.json']['content']
             data = json.loads(content)
             # Basic schema check: ensure items have 'layer' key. If not, reset to avoid crashes.
-            if data and not all('layer' in v for v in data.values()):
+            if data and not all('layer' in v for v in data.values() if isinstance(v, dict)):
                 print("Old schema detected. Resetting state for 4-layer logic.")
                 return {}
             return data
@@ -81,10 +81,10 @@ def get_binance_tickers():
         print(f"Error fetching Binance data: {e}")
         return []
 
-def get_1h_high_low(symbol):
-    """Fetches the high and low of the last two 1h candles to capture intra-hour spikes."""
+def get_recent_high_low(symbol):
+    """Fetches the high and low of the last two 15m candles to capture intra-tick spikes."""
     url = f"{BINANCE_BASE_URL}/klines"
-    params = {"symbol": symbol, "interval": "1h", "limit": 2}
+    params = {"symbol": symbol, "interval": "15m", "limit": 2}
     try:
         response = requests.get(url, params=params)
         if response.status_code == 200:
@@ -142,11 +142,15 @@ def format_price(price):
         return f"{price:.6f}"
     return f"{price:,.4f}"
 
-def format_time(hours):
-    """Formats hours into '0d 00h' strings."""
-    d = hours // 24
-    h = hours % 24
-    return f"{d}d {h:02d}h"
+def format_time(ticks):
+    """Formats 15-min ticks into '0d 00h' or '0h 00m' strings."""
+    total_minutes = ticks * 15
+    d = total_minutes // (24 * 60)
+    h = (total_minutes % (24 * 60)) // 60
+    m = total_minutes % 60
+    if d > 0:
+        return f"{d}d {h:02d}h"
+    return f"{h}h {m:02d}m"
 
 def get_volume_zone(vol_usd):
     """Classifies volume into three zones with emojis."""
@@ -158,12 +162,20 @@ def get_volume_zone(vol_usd):
         return "🐟 <b>Retail</b>"
 
 def main():
-    print("Starting Multi-Layer Binance Screening Bot...")
+    print("Starting Multi-Layer Binance Screening Bot (15m Frequency)...")
     
     # 1. Load existing state
-    state = load_state()
+    state_full = load_state()
+    # Separate metadata from coins
+    metadata = state_full.pop('_metadata', {"tick": 0})
+    state = state_full
     
-    # Migration & Global Increment: Initialize 'thc' if missing, then increment for all existing coins
+    metadata['tick'] += 1
+    # Send Telegram every 4th run (1 hour)
+    should_send = (metadata['tick'] % 4 == 0)
+    print(f"Run Tick: {metadata['tick']} | Should send report: {should_send}")
+    
+    # Global Increment: Initialize 'thc' if missing, then increment for all existing coins
     for symbol in state:
         if 'thc' not in state[symbol]:
             state[symbol]['thc'] = state[symbol].get('hc', 0)
@@ -249,8 +261,8 @@ def main():
         vol_usd = float(ticker['quoteVolume'])
         ch24 = float(ticker['priceChangePercent'])
         
-        # Fetch Intra-hour Spikes (Klines)
-        k_high, k_low = get_1h_high_low(symbol)
+        # Fetch Intra-tick Spikes (15m Klines)
+        k_high, k_low = get_recent_high_low(symbol)
         
         # Pass 1: Handle Transitions & Updates
         current_layer = coin['layer']
@@ -275,7 +287,7 @@ def main():
             bounce_check = (curr_price - coin['lp']) / coin['lp'] * 100
             if bounce_check > 20:
                 coin.update({"layer": "gainer_l1", "st": curr_price, "hp": curr_price, "lp": None, "hc": 0})
-            elif coin['hc'] >= 72:
+            elif coin['hc'] >= 288: # 72 hours * 4 ticks/hr
                 print(f"Delisted {symbol} from Gainer L2 (Timeout)")
                 continue
 
@@ -299,144 +311,138 @@ def main():
             drop_check = (coin['hp'] - curr_price) / coin['hp'] * 100
             if drop_check > 20:
                 coin.update({"layer": "loser_l1", "st": curr_price, "lp": curr_price, "hp": None, "hc": 0})
-            elif coin['hc'] >= 72:
+            elif coin['hc'] >= 288: # 72 hours * 4 ticks/hr
                 print(f"Delisted {symbol} from Loser L2 (Timeout)")
                 continue
 
-        # Collect data for Pass 2
-        final_layer = coin['layer']
-        report_data[final_layer].append({
-            "symbol": symbol,
-            "coin": coin.copy(),
-            "curr_price": curr_price,
-            "vol_usd": vol_usd,
-            "ch24": ch24
-        })
+        # Collect data for Pass 2 (Only if we are sending)
+        if should_send:
+            final_layer = coin['layer']
+            report_data[final_layer].append({
+                "symbol": symbol,
+                "coin": coin.copy(),
+                "curr_price": curr_price,
+                "vol_usd": vol_usd,
+                "ch24": ch24
+            })
         
-        # Reset reversal tag after one report
+        # Reset reversal tag after processing
         if 'rev' in coin:
             coin['rev'] = False
         new_state[symbol] = coin
 
-    # Pass 2: Sort and Format Reports
-    final_report_strings = {k: [] for k in report_data.keys()}
-    
-    for layer_key, coins_list in report_data.items():
-        # Sort by total hour count (thc) descending: longest at the top
-        sorted_coins = sorted(coins_list, key=lambda x: x['coin']['thc'], reverse=True)
+    # Pass 2: Sort and Format Reports (Only if we are sending)
+    if should_send:
+        final_report_strings = {k: [] for k in report_data.keys()}
         
-        for item in sorted_coins:
-            symbol = item['symbol']
-            coin = item['coin']
-            curr_price = item['curr_price']
-            vol_usd = item['vol_usd']
-            ch24 = item['ch24']
+        for layer_key, coins_list in report_data.items():
+            # Sort by total tick count (thc) descending: longest at the top
+            sorted_coins = sorted(coins_list, key=lambda x: x['coin']['thc'], reverse=True)
             
-            thc_str = format_time(coin['thc'])
-            p_str = format_price(curr_price)
-            st_str = format_price(coin['st']) if coin['st'] else "N/A"
-            # Determine Reversal Tag with "Colors" (Emojis)
-            rev_tag = ""
-            if coin.get('rev'):
-                if layer_key.startswith('gainer'):
-                    rev_tag = " 🟢 🔄 <b>Bullish Reversal</b>"
-                else:
-                    rev_tag = " 🔴 🔄 <b>Bearish Reversal</b>"
-            
-            vol_zone = get_volume_zone(vol_usd)
-            
-            if layer_key == "gainer_l1":
-                hp_str = format_price(coin['hp'])
-                ip = (curr_price - coin['st']) / coin['st'] * 100
-                dh = (coin['hp'] - curr_price) / coin['hp'] * 100
-                final_report_strings["gainer_l1"].append(
-                    f"<b>• {symbol}</b>{rev_tag}\n"
-                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                    f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>\n"
-                    f"  Inc: <b>{ip:+.2f}%</b> | Drop: <b>{dh:.2f}%</b>\n"
-                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                    f"  Time: {thc_str}"
-                )
-            elif layer_key == "gainer_l2":
-                lp_str = format_price(coin['lp'])
-                bp = (curr_price - coin['lp']) / coin['lp'] * 100
-                rem_str = format_time(max(0, 72 - coin['hc']))
-                final_report_strings["gainer_l2"].append(
-                    f"<b>• {symbol}</b>{rev_tag}\n"
-                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                    f"  LP: <code>{lp_str}</code> | Bounce: <b>{bp:+.2f}%</b>\n"
-                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                    f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
-                )
-            elif layer_key == "loser_l1":
-                lp_str = format_price(coin['lp'])
-                dp = (coin['st'] - curr_price) / coin['st'] * 100
-                bh = (curr_price - coin['lp']) / coin['lp'] * 100
-                final_report_strings["loser_l1"].append(
-                    f"<b>• {symbol}</b>{rev_tag}\n"
-                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                    f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>\n"
-                    f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
-                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                    f"  Time: {thc_str}"
-                )
-            elif layer_key == "loser_l2":
-                hp_str = format_price(coin['hp'])
-                dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
-                rem_str = format_time(max(0, 72 - coin['hc']))
-                final_report_strings["loser_l2"].append(
-                    f"<b>• {symbol}</b>{rev_tag}\n"
-                    f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                    f"  HP: <code>{hp_str}</code> | Drop: <b>{dropp:.2f}%</b>\n"
-                    f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                    f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
-                )
+            for item in sorted_coins:
+                symbol = item['symbol']
+                coin = item['coin']
+                curr_price = item['curr_price']
+                vol_usd = item['vol_usd']
+                ch24 = item['ch24']
+                
+                thc_str = format_time(coin['thc'])
+                p_str = format_price(curr_price)
+                st_str = format_price(coin['st']) if coin['st'] else "N/A"
+                # Determine Reversal Tag with "Colors" (Emojis)
+                rev_tag = ""
+                if coin.get('rev'):
+                    if layer_key.startswith('gainer'):
+                        rev_tag = " 🟢 🔄 <b>Bullish Reversal</b>"
+                    else:
+                        rev_tag = " 🔴 🔄 <b>Bearish Reversal</b>"
+                
+                vol_zone = get_volume_zone(vol_usd)
+                
+                if layer_key == "gainer_l1":
+                    hp_str = format_price(coin['hp'])
+                    ip = (curr_price - coin['st']) / coin['st'] * 100
+                    dh = (coin['hp'] - curr_price) / coin['hp'] * 100
+                    final_report_strings["gainer_l1"].append(
+                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                        f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>\n"
+                        f"  Inc: <b>{ip:+.2f}%</b> | Drop: <b>{dh:.2f}%</b>\n"
+                        f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                        f"  Time: {thc_str}"
+                    )
+                elif layer_key == "gainer_l2":
+                    lp_str = format_price(coin['lp'])
+                    bp = (curr_price - coin['lp']) / coin['lp'] * 100
+                    rem_str = format_time(max(0, 288 - coin['hc']))
+                    final_report_strings["gainer_l2"].append(
+                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                        f"  LP: <code>{lp_str}</code> | Bounce: <b>{bp:+.2f}%</b>\n"
+                        f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                        f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
+                    )
+                elif layer_key == "loser_l1":
+                    lp_str = format_price(coin['lp'])
+                    dp = (coin['st'] - curr_price) / coin['st'] * 100
+                    bh = (curr_price - coin['lp']) / coin['lp'] * 100
+                    final_report_strings["loser_l1"].append(
+                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                        f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>\n"
+                        f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
+                        f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                        f"  Time: {thc_str}"
+                    )
+                elif layer_key == "loser_l2":
+                    hp_str = format_price(coin['hp'])
+                    dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
+                    rem_str = format_time(max(0, 288 - coin['hc']))
+                    final_report_strings["loser_l2"].append(
+                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                        f"  HP: <code>{hp_str}</code> | Drop: <b>{dropp:.2f}%</b>\n"
+                        f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                        f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
+                    )
 
-    # 5. Format & Send Telegram Messages (Section by Section with intra-section splitting)
-    header = "📊 <b>Binance Screening Report</b>"
-    
-    sections = [
-        ("🔥 <b>Gainer (L1 - Momentum)</b>", "gainer_l1"),
-        ("🏥 <b>Gainer L2 (Recovery)</b>", "gainer_l2"),
-        ("🩸 <b>Loser (L1 - Bottoming)</b>", "loser_l1"),
-        ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
-    ]
-    
-    first_section = True
-    for title, key in sections:
-        items = final_report_strings[key]
-        if not items:
-            continue
+        # 5. Format & Send Telegram Messages
+        header = "📊 <b>Binance Screening Report (Hourly)</b>"
+        
+        sections = [
+            ("🔥 <b>Gainer (L1 - Momentum)</b>", "gainer_l1"),
+            ("🏥 <b>Gainer L2 (Recovery)</b>", "gainer_l2"),
+            ("🩸 <b>Loser (L1 - Bottoming)</b>", "loser_l1"),
+            ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
+        ]
+        
+        first_section_msg = True
+        for title, key in sections:
+            items = final_report_strings[key]
+            if not items:
+                continue
+                
+            current_msg = ""
+            if first_section_msg:
+                current_msg += header + "\n"
+                first_section_msg = False
             
-        current_msg = ""
-        # Add the global header only to the very first message sent
-        if first_section:
-            current_msg += header + "\n"
-            first_section = False
-        
-        current_msg += f"\n{title}\n"
-        
-        for item in items:
-            # Check if adding this item (plus a newline) would exceed the Telegram limit
-            # Using 4000 to be safe (limit is 4096)
-            if len(current_msg) + len(item) + 2 > 4000:
-                # Send what we have so far
+            current_msg += f"\n{title}\n"
+            
+            for item in items:
+                if len(current_msg) + len(item) + 2 > 4000:
+                    send_telegram_message(current_msg.strip())
+                    time.sleep(1)
+                    current_msg = f"{title} (ต่อ)\n\n{item}\n"
+                else:
+                    current_msg += item + "\n"
+            
+            if current_msg:
                 send_telegram_message(current_msg.strip())
                 time.sleep(1)
-                # Start new message with the section title as context
-                current_msg = f"{title} (ต่อ)\n\n{item}\n"
-            else:
-                current_msg += item + "\n"
-        
-        # Send the remaining part of the section
-        if current_msg:
-            send_telegram_message(current_msg.strip())
-            time.sleep(1)
-
-    if first_section:
-        print("No active coins to report.")
 
     # 6. Save State
+    new_state['_metadata'] = metadata
     save_state(new_state)
     print("Process completed.")
 

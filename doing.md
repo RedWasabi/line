@@ -15,6 +15,9 @@
     - **Reliability Fix (v2.2)**: Implemented automated multi-part delivery with "(หน้า x/y)" page indicators for long AI summaries.
     - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
+    - **15-Minute Precision (v3.0)**: Upgraded to fetch data every 15 minutes while maintaining consolidated hourly Telegram reports.
+    - **Intra-tick Spike Detection**: Uses 15m Klines for 4x better responsiveness to pumps and dumps.
+    - **Global Tick Tracking**: Orchestrates reporting frequency via Gist state metadata.
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
     - **Duration-Based Sorting (v2.5)**: All report sections are now sorted by time on watchlist (longest at the top).
     - **Algorithmic Symmetry**: Perfectly mirrored logic for Gainers and Losers (Drop vs Bounce) for 100% mathematical consistency.
