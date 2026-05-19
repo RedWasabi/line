@@ -1,77 +1,42 @@
 # Project Status: Crypto Intelligence & Binance Watchlist Bot
 
-**Date:** Monday, May 18, 2026
-**Status:** ✅ Dual-Bot Architecture Fully Operational
+**Date:** Tuesday, May 19, 2026
+**Status:** ✅ Dual-Bot Architecture Hardened for Personal Use
 
 ## 🟢 Completed Tasks
 1.  **Macro News Bot (`bot.py`)**:
-    - **OpenRouter Integration (v2.3)**: Migrated from Groq to OpenRouter using the `openrouter/owl-alpha` model for enhanced market analysis.
-    - **Parsing & Performance Fix (v2.4)**:
-        - Implemented strict HTML sanitization to strip unsupported `<br>` tags that caused Telegram delivery failures.
-        - Optimized performance by capping analysis to the top 20 most relevant news items, reducing latency and GitHub Action execution time.
+    - **Structural Hardening (v2.12)**:
+        - Migrated from `print` to the `logging` module for better process tracking.
+        - Externalized news limits and model selection as constants.
     - **Groq Restoration (v2.11)**:
-        - Migrated back to Groq API using `llama-3.3-70b-versatile` for high-speed inference.
-        - Replaced `openai` SDK with `groq` SDK.
-        - Preserved all v2.10 Bulletproof Delivery and HTML sanitization logic.
+        - Migrated back to Groq API using `llama-3.3-70b-versatile`.
     - **Bulletproof Delivery Fix (v2.10)**:
-
-        - Implemented a "Bulletproof Sanitizer" that strips all tag attributes (preventing 400 errors from hallucinated styles).
-        - Added mandatory HTML escaping for non-tag characters (handles stray `<` or `&` from LLM).
-        - Refined splitting logic to ALWAYS check for tag rupture and ensure progress, preventing infinite loops.
-        - Verified that whitelisted tags (`<b>`, `<i>`, `<code>`, `<blockquote>`) are preserved and correctly balanced across parts.
-        - Resolved the "Missing Pages" issue where parts 1 and 2 were rejected by Telegram due to malformed HTML.
-    - **Bulletproof Delivery Fix (v2.9) [SUPERSEDED]**:
-        - Reverted UI to `<blockquote>` style.
-        - Initial tag-stack tracker implementation.
-
-    - **Typography & Formatting Polish (v2.8)**:
-        - Fixed a bug where literal `\n` characters were displayed in Telegram.
-        - Improved readability by restricting `<code>` tags to quantities and tickers, preventing the "small word" effect on mobile.
-        - Refined the layout with bold headers and optimized spacing.
-    - **Emoji Card Style UI (v2.7) [REVERTED]**:
-        - Replaced by v2.9 Blockquote style for better visual structure.
-    - Thai-language summaries via OpenRouter.
-    - **High-Impact Sources (v2.1)**: Integrated Glassnode (On-chain), SEC (Regulatory), and CNBC Finance (Macro).
-    - **Executive Summary (v2)**: Added top-level TL;DR for market mood.
-    - **Deep Insight (v2)**: Focus on 'Liquidity & Money Flow' and interest rate trajectory.
-    - **Modern UI (v2)**: Enhanced formatting with blockquotes, monospace data (<code>), and rich emojis.
-    - **Analytics Categories**: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].
+        - Implemented a "Bulletproof Sanitizer" that strips tag attributes and escapes special characters.
+        - Refined splitting logic for HTML tag balance across paginated messages.
+    - **High-Impact Sources (v2.1)**: Integrated Glassnode, SEC, and CNBC Finance.
     - **Telegram Migration**: Unlimited messages via `TELEGRAM_BOT_TOKEN`.
-    - **Reliability Fix (v2.2)**: Implemented automated multi-part delivery with "(หน้า x/y)" page indicators for long AI summaries.
-    - **External Trigger**: `repository_dispatch` (type: `trigger-news`).
 2.  **Binance Screening Bot (`binance_bot.py`)**:
-    - **Global Tick Reset (v3.3)**: Optimized state metadata to reset the report cycle counter back to 0 after every 4th run, keeping the Gist data clean.
-    - **Persistence Fix (v3.2)**: Resolved a critical bug where the schema validation check incorrectly reset the bot's state on every run.
-    - **Tightened Transitions (v3.1)**: Lowered the L1 -> L2 transition threshold from 15% to **10%** for both Gainers (Drop check) and Losers (Bounce check) to improve responsiveness.
-    - **15-Minute Precision (v3.0)**: Upgraded to fetch data every 15 minutes while maintaining consolidated hourly Telegram reports.
-    - **Intra-tick Spike Detection**: Uses 15m Klines for 4x better responsiveness to pumps and dumps.
-    - **Global Tick Tracking**: Orchestrates reporting frequency via Gist state metadata.
+    - **Structural Hardening (v3.4)**:
+        - **Timestamp-Based Reporting**: Replaced fragile tick-based counters with absolute time checks (`REPORT_INTERVAL_SEC`), ensuring reliable hourly reports despite cloud runner jitter.
+        - **Logging Migration**: Implemented the `logging` module for professional auditing.
+        - **Configuration Constants**: Externalized all thresholds (10% drop, 20% bounce, delist timers) to the top of the file for easy recalibration.
+    - **Global Tick Reset (v3.3)**: Optimized state metadata.
+    - **15-Minute Precision (v3.0)**: Upgraded to fetch data every 15 minutes.
+    - **Intra-tick Spike Detection**: Uses 15m Klines.
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
-    - **Duration-Based Sorting (v2.5)**: All report sections are now sorted by time on watchlist (longest at the top).
-    - **Algorithmic Symmetry**: Perfectly mirrored logic for Gainers and Losers (Drop vs Bounce) for 100% mathematical consistency.
-    - **Intra-hour Precision (v2.4)**: Uses Binance Klines (1h candles) to capture "invisible" spikes/dips.
-    - **First-Run Protection**: Logic fix to ensure all coins start in L1 for their first appearance.
-    - **Liquidity Zones (v2.3)**: Visual emojis for volume: 🐟 Retail, 🐬 Healthy, 🐳 Institutional.
-    - **Ultimate Reversal (v2.2)**: Seamlessly crossover between categories with 🔄 Trend Reversed tag.
+    - **Duration-Based Sorting (v2.5)**: Sorted by time on watchlist.
+    - **Ultimate Reversal (v2.2)**: 🔄 Trend Reversed tag.
     - **Quality Control**: Strict $1,000,000 daily volume filter.
-    - **Algorithm Fix (v2.1)**: Continuous tracking during transitions.
-    - **High-Precision UI**: Dynamic 8-decimal price formatting.
-    - **Live Metrics**: Live Binance 24h Change % included.
-    - **Corrected Timer**: 'Delist in' counts down from 72h (L2 only).
-    - **Reliability Fix (v2.9)**: Enhanced sectional splitting. If a single layer (e.g., Loser L1) exceeds the character limit, it is automatically broken into multiple messages with "(ต่อ)" context tags.
-    - **Color-Coded Reversals (v2.7)**: Visual 🟢 Bullish / 🔴 Bearish tags for trend crossovers.
-    - **Delisted Filter (v2.8)**: Excludes suspended/delisted coins by requiring an active bid price (`bidPrice > 0`).
-    - **External Trigger**: `repository_dispatch` (type: `trigger-binance`).
+    - **Reliability Fix (v2.9)**: Intra-section batching and split-message support.
 3.  **Infrastructure**:
     - GitHub Gist for persistent state.
-    - `data-api.binance.vision` for reliable connectivity.
-    - **Trigger Optimization**: Replaced native GitHub cron (delayed) with external API dispatches.
+    - `data-api.binance.vision` for regional bypass.
+    - **Trigger Optimization**: External API dispatches for precision timing.
 
 ## 🟡 Ongoing Monitoring
-- **State Migration**: Verified Gist schema automatically updates to the 4-layer model.
-- **Workflow Health**: Ensuring YAML fixes resolved the Action trigger availability.
+- **Reporting Intervals**: Verifying that `REPORT_INTERVAL_SEC` correctly gates Telegram notifications while maintaining 15-minute polling.
 
 ## 🚀 Future Ideas
 - **Volume Surge Detection**: Mark coins with 2x average hourly volume.
-- **Manual Control**: Add a workflow trigger to force-delist or manually add a specific coin to a layer.
 - **RSI Overlays**: Include RSI status for L1 momentum coins.
+- **Auto-Scale List**: Dynamically adjust the Top 10 limit based on market volatility.

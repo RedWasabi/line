@@ -2,25 +2,41 @@ import os
 import json
 import time
 import requests
+import logging
 from dotenv import load_dotenv
+
+# Setup Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
-# Configuration
+# Configuration - Constants
 GIST_ID = os.environ.get("GIST_ID")
 GH_PAT = os.environ.get("GH_PAT")
 BINANCE_TELEGRAM_BOT_TOKEN = os.environ.get("BINANCE_TELEGRAM_BOT_TOKEN")
 BINANCE_TELEGRAM_CHAT_ID = os.environ.get("BINANCE_TELEGRAM_CHAT_ID")
 
-# Use data-api.binance.vision (Official Public Data Mirror) to bypass US regional blocks on GitHub runners
+# Strategy Thresholds
+L1_TO_L2_DROP_PCT = 10.0      # 10% drop from high moves L1 -> L2
+L2_RECOVERY_BOUNCE_PCT = 20.0  # 20% bounce from low moves L2 -> L1
+MIN_VOLUME_USD = 1_000_000    # $1M USD minimum daily volume
+DELIST_TICKS_LIMIT = 288      # 72 hours (288 * 15m ticks)
+REPORT_INTERVAL_SEC = 3300    # ~55 mins (ensures 1 report per hour even with jitter)
+
+# API Endpoints
 BINANCE_BASE_URL = "https://data-api.binance.vision/api/v3"
 GIST_API_URL = f"https://api.github.com/gists/{GIST_ID}"
 
 def load_state():
     """Loads the watchlist state from a GitHub Gist."""
     if not GIST_ID or not GH_PAT:
-        print("GIST_ID or GH_PAT not set. Starting with empty state.")
+        logger.warning("GIST_ID or GH_PAT not set. Starting with empty state.")
         return {}
     
     headers = {"Authorization": f"token {GH_PAT}"}
@@ -33,14 +49,14 @@ def load_state():
             # Basic schema check: ensure coin items have 'layer' key. Ignore metadata.
             coin_values = [v for k, v in data.items() if k != '_metadata' and isinstance(v, dict)]
             if data and coin_values and not all('layer' in v for v in coin_values):
-                print("Old schema detected. Resetting state for 4-layer logic.")
+                logger.info("Old schema detected. Resetting state for 4-layer logic.")
                 return {}
             return data
         else:
-            print(f"Failed to load Gist: {response.status_code} {response.text}")
+            logger.error(f"Failed to load Gist: {response.status_code} {response.text}")
             return {}
     except Exception as e:
-        print(f"Error loading Gist: {e}")
+        logger.error(f"Error loading Gist: {e}")
         return {}
 
 def save_state(state):
@@ -62,11 +78,11 @@ def save_state(state):
     try:
         response = requests.patch(GIST_API_URL, headers=headers, json=data)
         if response.status_code == 200:
-            print("State saved to Gist successfully.")
+            logger.info("State saved to Gist successfully.")
         else:
-            print(f"Failed to save Gist: {response.status_code} {response.text}")
+            logger.error(f"Failed to save Gist: {response.status_code} {response.text}")
     except Exception as e:
-        print(f"Error saving Gist: {e}")
+        logger.error(f"Error saving Gist: {e}")
 
 def get_binance_tickers():
     """Fetches all 24h tickers from Binance."""
@@ -76,10 +92,10 @@ def get_binance_tickers():
         if response.status_code == 200:
             return response.json()
         else:
-            print(f"Failed to fetch Binance data: {response.status_code}")
+            logger.error(f"Failed to fetch Binance data: {response.status_code}")
             return []
     except Exception as e:
-        print(f"Error fetching Binance data: {e}")
+        logger.error(f"Error fetching Binance data: {e}")
         return []
 
 def get_recent_high_low(symbol):
@@ -97,16 +113,16 @@ def get_recent_high_low(symbol):
             lows = [float(k[3]) for k in klines]
             return max(highs), min(lows)
         else:
-            print(f"Klines API Error for {symbol}: {response.status_code}")
+            logger.error(f"Klines API Error for {symbol}: {response.status_code}")
             return None, None
     except Exception as e:
-        print(f"Error fetching Klines for {symbol}: {e}")
+        logger.error(f"Error fetching Klines for {symbol}: {e}")
         return None, None
 
 def send_telegram_message(text):
     """Sends the report to Telegram."""
     if not BINANCE_TELEGRAM_BOT_TOKEN or not BINANCE_TELEGRAM_CHAT_ID:
-        print("Telegram credentials not set.")
+        logger.error("Telegram credentials not set.")
         return
     url = f"https://api.telegram.org/bot{BINANCE_TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
@@ -117,11 +133,11 @@ def send_telegram_message(text):
     try:
         response = requests.post(url, json=payload)
         if response.status_code == 200:
-            print("Binance report sent to Telegram.")
+            logger.info("Binance report part sent to Telegram.")
         else:
-            print(f"Telegram API Error: {response.status_code} {response.text}")
+            logger.error(f"Telegram API Error: {response.status_code} {response.text}")
     except Exception as e:
-        print(f"Error sending Telegram message: {e}")
+        logger.error(f"Error sending Telegram message: {e}")
 
 def format_usd(value):
     """Formats large USD values into readable strings (e.g., $1.2M, $500K)."""
@@ -163,20 +179,24 @@ def get_volume_zone(vol_usd):
         return "🐟 <b>Retail</b>"
 
 def main():
-    print("Starting Multi-Layer Binance Screening Bot (15m Frequency)...")
+    logger.info("Starting Multi-Layer Binance Screening Bot (v3.4 - Structural Hardening)...")
     
     # 1. Load existing state
     state_full = load_state()
     # Separate metadata from coins
-    metadata = state_full.pop('_metadata', {"tick": 0})
+    metadata = state_full.pop('_metadata', {"last_report_time": 0})
     state = state_full
     
-    metadata['tick'] += 1
-    # Send Telegram every 4th run (1 hour)
-    should_send = (metadata['tick'] % 4 == 0)
+    # Absolute Time-based Reporting Check
+    now = time.time()
+    time_since_last = now - metadata.get('last_report_time', 0)
+    should_send = time_since_last >= REPORT_INTERVAL_SEC
+    
     if should_send:
-        metadata['tick'] = 0  # Reset to 0 after reporting to keep it clean
-    print(f"Run Tick: {metadata['tick']} | Should send report: {should_send}")
+        metadata['last_report_time'] = now
+        logger.info(f"Report Triggered: {time_since_last/60:.1f} minutes since last report.")
+    else:
+        logger.info(f"Monitoring: {time_since_last/60:.1f} minutes since last report. Waiting for trigger.")
     
     # Global Increment: Initialize 'thc' if missing, then increment for all existing coins
     for symbol in state:
@@ -189,11 +209,11 @@ def main():
     if not tickers:
         return
 
-    # Filter for USDT pairs, significant volume (>$1M), and active trading (bidPrice > 0)
+    # Filter for USDT pairs, significant volume, and active trading
     usdt_tickers = [
         t for t in tickers 
         if t['symbol'].endswith('USDT') 
-        and float(t['quoteVolume']) >= 1_000_000
+        and float(t['quoteVolume']) >= MIN_VOLUME_USD
         and float(t.get('bidPrice', 0)) > 0
     ]
     
@@ -212,7 +232,7 @@ def main():
         # New coin OR Trend Crossover (Loser -> Gainer)
         if symbol not in state or state[symbol]['layer'].startswith('loser'):
             if symbol in state:
-                print(f"🔄 Reversal: Moving {symbol} from Loser to Gainer L1")
+                logger.info(f"🔄 Reversal: Moving {symbol} from Loser to Gainer L1")
             
             state[symbol] = {
                 "layer": "gainer_l1",
@@ -223,7 +243,7 @@ def main():
                 "thc": 0,
                 "rev": True if symbol in state else False
             }
-            print(f"Added {symbol} to Gainer L1")
+            logger.info(f"Added {symbol} to Gainer L1")
 
     for t in top_losers:
         symbol = t['symbol']
@@ -232,7 +252,7 @@ def main():
         # New coin OR Trend Crossover (Gainer -> Loser)
         if symbol not in state or state[symbol]['layer'].startswith('gainer'):
             if symbol in state:
-                print(f"🔄 Reversal: Moving {symbol} from Gainer to Loser L1")
+                logger.info(f"🔄 Reversal: Moving {symbol} from Gainer to Loser L1")
                 
             state[symbol] = {
                 "layer": "loser_l1",
@@ -243,11 +263,10 @@ def main():
                 "thc": 0,
                 "rev": True if symbol in state else False
             }
-            print(f"Added {symbol} to Loser L1")
+            logger.info(f"Added {symbol} to Loser L1")
 
     # 4. Process State Transitions & Collect Data for Reports
     new_state = {}
-    # Use objects to store data before sorting
     report_data = {
         "gainer_l1": [],
         "gainer_l2": [],
@@ -267,7 +286,6 @@ def main():
         # Fetch Intra-tick Spikes (15m Klines)
         k_high, k_low = get_recent_high_low(symbol)
         
-        # Pass 1: Handle Transitions & Updates
         current_layer = coin['layer']
         
         if current_layer == "gainer_l1":
@@ -275,9 +293,9 @@ def main():
             obs_high = max(curr_price, k_high) if k_high else curr_price
             coin['hp'] = max(coin['hp'], obs_high)
             
-            # Check for 10% Drop -> Move to L2 (Recovery)
+            # Check for Drop -> Move to L2 (Recovery)
             drop_check = (coin['hp'] - curr_price) / coin['hp'] * 100
-            if drop_check > 10 and coin['thc'] > 0:
+            if drop_check > L1_TO_L2_DROP_PCT and coin['thc'] > 0:
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
                 
         elif current_layer == "gainer_l2":
@@ -286,12 +304,12 @@ def main():
             obs_low = min(curr_price, k_low) if k_low else curr_price
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
             
-            # Check for 20% Bounce -> Move back to L1 (Momentum)
+            # Check for Bounce -> Move back to L1 (Momentum)
             bounce_check = (curr_price - coin['lp']) / coin['lp'] * 100
-            if bounce_check > 20:
+            if bounce_check > L2_RECOVERY_BOUNCE_PCT:
                 coin.update({"layer": "gainer_l1", "st": curr_price, "hp": curr_price, "lp": None, "hc": 0})
-            elif coin['hc'] >= 288: # 72 hours * 4 ticks/hr
-                print(f"Delisted {symbol} from Gainer L2 (Timeout)")
+            elif coin['hc'] >= DELIST_TICKS_LIMIT:
+                logger.info(f"Delisted {symbol} from Gainer L2 (Timeout)")
                 continue
 
         elif current_layer == "loser_l1":
@@ -299,9 +317,9 @@ def main():
             obs_low = min(curr_price, k_low) if k_low else curr_price
             coin['lp'] = min(coin['lp'] if coin['lp'] is not None else curr_price, obs_low)
             
-            # Check for 10% Bounce -> Move to L2 (Dead Cat)
+            # Check for Bounce -> Move to L2 (Dead Cat)
             bounce_check = (curr_price - coin['lp']) / coin['lp'] * 100
-            if bounce_check > 10 and coin['thc'] > 0:
+            if bounce_check > L1_TO_L2_DROP_PCT and coin['thc'] > 0: # Threshold is symmetric for L1->L2
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
 
         elif current_layer == "loser_l2":
@@ -310,15 +328,15 @@ def main():
             obs_high = max(curr_price, k_high) if k_high else curr_price
             coin['hp'] = max(coin['hp'] if coin['hp'] is not None else curr_price, obs_high)
             
-            # Check for 20% Drop -> Move back to L1 (Bottoming)
+            # Check for Drop -> Move back to L1 (Bottoming)
             drop_check = (coin['hp'] - curr_price) / coin['hp'] * 100
-            if drop_check > 20:
+            if drop_check > L2_RECOVERY_BOUNCE_PCT:
                 coin.update({"layer": "loser_l1", "st": curr_price, "lp": curr_price, "hp": None, "hc": 0})
-            elif coin['hc'] >= 288: # 72 hours * 4 ticks/hr
-                print(f"Delisted {symbol} from Loser L2 (Timeout)")
+            elif coin['hc'] >= DELIST_TICKS_LIMIT:
+                logger.info(f"Delisted {symbol} from Loser L2 (Timeout)")
                 continue
 
-        # Collect data for Pass 2 (Only if we are sending)
+        # Collect data for Reports (Only if we are sending)
         if should_send:
             final_layer = coin['layer']
             report_data[final_layer].append({
@@ -329,17 +347,15 @@ def main():
                 "ch24": ch24
             })
         
-        # Reset reversal tag after processing
         if 'rev' in coin:
             coin['rev'] = False
         new_state[symbol] = coin
 
-    # Pass 2: Sort and Format Reports (Only if we are sending)
+    # Sort and Format Reports
     if should_send:
         final_report_strings = {k: [] for k in report_data.keys()}
         
         for layer_key, coins_list in report_data.items():
-            # Sort by total tick count (thc) descending: longest at the top
             sorted_coins = sorted(coins_list, key=lambda x: x['coin']['thc'], reverse=True)
             
             for item in sorted_coins:
@@ -352,7 +368,7 @@ def main():
                 thc_str = format_time(coin['thc'])
                 p_str = format_price(curr_price)
                 st_str = format_price(coin['st']) if coin['st'] else "N/A"
-                # Determine Reversal Tag with "Colors" (Emojis)
+                
                 rev_tag = ""
                 if coin.get('rev'):
                     if layer_key.startswith('gainer'):
@@ -377,7 +393,7 @@ def main():
                 elif layer_key == "gainer_l2":
                     lp_str = format_price(coin['lp'])
                     bp = (curr_price - coin['lp']) / coin['lp'] * 100
-                    rem_str = format_time(max(0, 288 - coin['hc']))
+                    rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
                     final_report_strings["gainer_l2"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
@@ -400,7 +416,7 @@ def main():
                 elif layer_key == "loser_l2":
                     hp_str = format_price(coin['hp'])
                     dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
-                    rem_str = format_time(max(0, 288 - coin['hc']))
+                    rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
                     final_report_strings["loser_l2"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
@@ -447,7 +463,11 @@ def main():
     # 6. Save State
     new_state['_metadata'] = metadata
     save_state(new_state)
-    print("Process completed.")
+    logger.info("Process completed successfully.")
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()

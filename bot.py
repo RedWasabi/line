@@ -4,22 +4,35 @@ import feedparser
 import requests
 import html
 import re
+import logging
 from groq import Groq
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+# Setup Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 # Load environment variables from .env file
 load_dotenv()
 
-# Configuration - Targeted sources for Macro and Crypto intelligence
+# Configuration - Constants
+LIMIT_PER_SOURCE = 5
+MAX_TOTAL_NEWS = 20
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
 RSS_FEEDS = [
-    "https://www.federalreserve.gov/newsevents/press/all/2026all.xml", # Fed Press Releases (2026)
-    "https://www.bls.gov/feed/bls_latest.rss",                        # US Bureau of Labor Statistics (CPI/Jobs)
-    "https://www.coindesk.com/arc/outboundfeeds/rss/",                # Crypto Specialist (Regulation/Institutions)
-    "https://cointelegraph.com/rss",                                  # Crypto Market News
-    "https://insights.glassnode.com/rss",                            # Glassnode Insights (On-chain/Whales)
-    "https://www.sec.gov/news/pressreleases.rss",                     # SEC Press Releases (Regulatory)
-    "https://search.cnbc.com/rs/search/combinedcms/view.xml?id=10000664" # CNBC Finance (Broad Macro)
+    "https://www.federalreserve.gov/newsevents/press/all/2026all.xml", 
+    "https://www.bls.gov/feed/bls_latest.rss",                        
+    "https://www.coindesk.com/arc/outboundfeeds/rss/",                
+    "https://cointelegraph.com/rss",                                  
+    "https://insights.glassnode.com/rss",                            
+    "https://www.sec.gov/news/pressreleases.rss",                     
+    "https://search.cnbc.com/rs/search/combinedcms/view.xml?id=10000664" 
 ]
 
 # Load environment variables
@@ -27,34 +40,34 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-def get_aggregated_news(urls, limit_per_source=8):
+def get_aggregated_news(urls, limit=LIMIT_PER_SOURCE):
     """Scrapes news from multiple RSS URLs with improved error handling."""
     all_news = []
     for url in urls:
         try:
-            print(f"Fetching news from {url}...")
+            logger.info(f"Fetching news from {url}...")
             feed = feedparser.parse(url)
             if not feed.entries:
                 continue
-            for entry in feed.entries[:limit_per_source]:
+            for entry in feed.entries[:limit]:
                 title = entry.get("title", "")
                 summary = entry.get("summary", "")
                 if not any(n['title'] == title for n in all_news):
                     all_news.append({"title": title, "summary": summary, "source": url})
         except Exception as e:
-            print(f"Error fetching RSS feed {url}: {e}")
+            logger.error(f"Error fetching RSS feed {url}: {e}")
     return all_news
 
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=60),
     retry=retry_if_exception_type(Exception),
-    before_sleep=lambda retry_state: print(f"API busy or error. Retrying in {retry_state.next_action.sleep} seconds... (Attempt {retry_state.attempt_number})")
+    before_sleep=lambda retry_state: logger.warning(f"API busy or error. Retrying in {retry_state.next_action.sleep} seconds... (Attempt {retry_state.attempt_number})")
 )
 def summarize_market_news(news_items):
     """Summarizes market-moving news using Groq with deep insight and modern HTML formatting."""
     if not GROQ_API_KEY:
-        print("Error: GROQ_API_KEY environment variable is not set.")
+        logger.error("Error: GROQ_API_KEY environment variable is not set.")
         return None
     
     client = Groq(api_key=GROQ_API_KEY)
@@ -85,7 +98,7 @@ def summarize_market_news(news_items):
         prompt += f"Source: {item['source']}\nTitle: {item['title']}\nSummary: {item['summary']}\n\n"
         
     completion = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         messages=[
             {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY <b>, <i>, <code>, <blockquote>. Strip all attributes. Escape all special characters like <, >, & except for these tags."},
             {"role": "user", "content": prompt}
@@ -98,7 +111,6 @@ def summarize_market_news(news_items):
 def bulletproof_sanitizer(text):
     """Deeply sanitizes LLM output to ensure perfect Telegram HTML compatibility (v2.10)."""
     # 1. First, escape all existing HTML characters to neutralize hallucinations
-    # We temporarily replace whitelisted tags with placeholders to protect them
     protected_tags = ["<b>", "</b>", "<i>", "</i>", "<code>", "</code>", "<blockquote>", "</blockquote>"]
     for i, tag in enumerate(protected_tags):
         text = text.replace(tag, f"__TAG_{i}__")
@@ -106,11 +118,11 @@ def bulletproof_sanitizer(text):
     # Escape everything else (handles stray <, >, &)
     text = html.escape(text, quote=False)
     
-    # Restore protected tags and strip attributes from any hallucinated versions
+    # Restore protected tags
     for i, tag in enumerate(protected_tags):
         text = text.replace(f"__TAG_{i}__", tag)
     
-    # 2. Strip any hallucinated tag attributes (e.g., <blockquote class="..."> -> <blockquote>)
+    # 2. Strip any hallucinated tag attributes
     text = re.sub(r'<(b|i|code|blockquote)\s+[^>]*>', r'<\1>', text, flags=re.IGNORECASE)
     
     # 3. Final cleanup: Remove completely unsupported tags
@@ -129,7 +141,6 @@ def split_message(text, max_length=4000):
             parts.append(text)
             break
             
-        # Try to split at a double newline for clean structural breaks
         split_at = text.rfind('\n\n', 0, max_length)
         if split_at == -1:
             split_at = text.rfind('\n', 0, max_length)
@@ -138,7 +149,6 @@ def split_message(text, max_length=4000):
             
         part = text[:split_at]
         
-        # Tag Balance Check: Ensure we don't split inside a blockquote
         open_tags = []
         for match in re.finditer(r'<(/?)(b|i|code|blockquote)>', part):
             if match.group(1) == "": # Opening tag
@@ -147,18 +157,15 @@ def split_message(text, max_length=4000):
                 if open_tags and open_tags[-1] == match.group(2):
                     open_tags.pop()
         
-        # Close all open tags for this part
         for tag in reversed(open_tags):
             part += f"</{tag}>"
             
         parts.append(part)
         
-        # Prepare remaining text: Re-open tags in the next part
         text = text[split_at:].lstrip()
         reopen_prefix = "".join([f"<{tag}>" for tag in open_tags])
         text = reopen_prefix + text
         
-        # Safety progress check
         if split_at == 0:
             parts.append(text)
             break
@@ -168,13 +175,10 @@ def split_message(text, max_length=4000):
 def send_telegram_message(text):
     """Sends the summarized text to Telegram with support for pagination (v2.10)."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Error: Telegram credentials not set.")
+        logger.error("Error: Telegram credentials not set.")
         return False
 
-    # 1. Sanitize
     clean_text = bulletproof_sanitizer(text)
-    
-    # 2. Split
     parts = split_message(clean_text)
     total_parts = len(parts)
     
@@ -192,41 +196,45 @@ def send_telegram_message(text):
         try:
             response = requests.post(url, json=payload)
             if response.status_code == 200:
-                print(f"Telegram part {i+1} sent successfully.")
+                logger.info(f"Telegram part {i+1} sent successfully.")
             else:
-                print(f"Telegram API Error (Part {i+1}): {response.status_code} {response.text}")
+                logger.error(f"Telegram API Error (Part {i+1}): {response.status_code} {response.text}")
                 success = False
         except Exception as e:
-            print(f"Error sending Telegram message part {i+1}: {e}")
+            logger.error(f"Error sending Telegram message part {i+1}: {e}")
             success = False
         
         if i < total_parts - 1:
-            time.sleep(1) # Anti-flood delay
+            time.sleep(1) 
             
     return success
 
 def main():
-    print("Starting Crypto Intelligence Bot (v2.11 - Groq Bulletproof)...")
+    logger.info("Starting Crypto Intelligence Bot (v2.12 - Structural Hardening)...")
     
-    news_items = get_aggregated_news(RSS_FEEDS, limit_per_source=5)
+    news_items = get_aggregated_news(RSS_FEEDS, limit=LIMIT_PER_SOURCE)
     if not news_items:
-        print("No news items retrieved. Exiting.")
+        logger.warning("No news items retrieved. Exiting.")
         return
     
-    if len(news_items) > 20:
-        news_items = news_items[:20]
+    if len(news_items) > MAX_TOTAL_NEWS:
+        news_items = news_items[:MAX_TOTAL_NEWS]
         
-    print(f"Analyzing {len(news_items)} news items...")
+    logger.info(f"Analyzing {len(news_items)} news items...")
     summary_text = summarize_market_news(news_items)
     
     if not summary_text:
-        print("Failed to generate report. Exiting.")
+        logger.error("Failed to generate report. Exiting.")
         return
 
-    print("Processing and sending report to Telegram...")
+    logger.info("Processing and sending report to Telegram...")
     send_telegram_message(summary_text)
     
-    print("Process completed.")
+    logger.info("Process completed successfully.")
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
