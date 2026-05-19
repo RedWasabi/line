@@ -15,6 +15,13 @@
         - Refined splitting logic for HTML tag balance across paginated messages.
     - **High-Impact Sources (v2.1)**: Integrated Glassnode, SEC, and CNBC Finance.
     - **Telegram Migration**: Unlimited messages via `TELEGRAM_BOT_TOKEN`.
+    - **Hacker News Integration (v2.13)**: 
+        - Integrated high-signal tech news via Algolia HN Search API.
+        - Implemented `points` and `num_comments` filters to prioritize community engagement signal.
+    - **Macro-Crypto Correlation Engine (v2.14)**:
+        - **Intelligent Filtering**: Implemented keyword-based priority tagging (e.g., Fed, Inflation, Liquidity) to surface high-impact macro news.
+        - **Causal Analysis**: LLM prompt now mandates "Cross-Source Correlation"—linking macro events (1st-order) to crypto liquidity/adoption shifts (2nd-order).
+        - **Priority Sorting**: High-signal news is presented first to ensure analytical focus on market-moving themes.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
     - **Structural Hardening (v3.4)**:
         - **Timestamp-Based Reporting**: Replaced fragile tick-based counters with absolute time checks (`REPORT_INTERVAL_SEC`), ensuring reliable hourly reports despite cloud runner jitter.

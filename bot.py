@@ -41,8 +41,10 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 def get_aggregated_news(urls, limit=LIMIT_PER_SOURCE):
-    """Scrapes news from multiple RSS URLs with improved error handling."""
+    """Scrapes news from multiple RSS URLs with priority tagging for crypto impact (v2.14)."""
     all_news = []
+    crypto_keywords = ["crypto", "bitcoin", "btc", "ethereum", "eth", "stablecoin", "etf", "sec", "fed", "inflation", "liquidity"]
+    
     for url in urls:
         try:
             logger.info(f"Fetching news from {url}...")
@@ -52,10 +54,53 @@ def get_aggregated_news(urls, limit=LIMIT_PER_SOURCE):
             for entry in feed.entries[:limit]:
                 title = entry.get("title", "")
                 summary = entry.get("summary", "")
+                
+                # Check for high-signal keywords to boost analytical depth
+                is_priority = any(kw in title.lower() for kw in crypto_keywords)
+                priority_tag = "[🔥 HIGH PRIORITY]" if is_priority else ""
+                
                 if not any(n['title'] == title for n in all_news):
-                    all_news.append({"title": title, "summary": summary, "source": url})
+                    all_news.append({
+                        "title": f"{priority_tag} {title}", 
+                        "summary": summary, 
+                        "source": url,
+                        "is_priority": is_priority
+                    })
         except Exception as e:
             logger.error(f"Error fetching RSS feed {url}: {e}")
+            
+    # Sort priority news to the top so LLM sees them first
+    all_news.sort(key=lambda x: x['is_priority'], reverse=True)
+    return all_news
+
+def get_hn_crypto_news(limit=LIMIT_PER_SOURCE):
+    """Fetches high-signal crypto/tech news from Hacker News via Algolia API (v2.13)."""
+    all_news = []
+    # Broad but relevant crypto/blockchain keywords
+    query = "crypto OR bitcoin OR ethereum OR blockchain OR stablecoin OR web3"
+    # Filter for stories with at least 5 points to ensure some level of community interest/impact
+    url = f"https://hn.algolia.com/api/v1/search_by_date?query={query}&tags=story&numericFilters=points>=5&hitsPerPage={limit}"
+    
+    try:
+        logger.info("Fetching news from Hacker News...")
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            hits = response.json().get("hits", [])
+            for hit in hits:
+                title = hit.get("title", "")
+                link = hit.get("url") or f"https://news.ycombinator.com/item?id={hit['objectID']}"
+                # Points and Comments serve as an 'Impact' proxy for tech community interest
+                points = hit.get("points", 0)
+                num_comments = hit.get("num_comments", 0)
+                summary = f"Tech Signal: {points} points, {num_comments} comments. URL: {link}"
+                
+                if not any(n['title'] == title for n in all_news):
+                    all_news.append({"title": title, "summary": summary, "source": "Hacker News"})
+        else:
+            logger.error(f"Hacker News API Error: {response.status_code}")
+    except Exception as e:
+        logger.error(f"Error fetching Hacker News: {e}")
+    
     return all_news
 
 @retry(
@@ -74,16 +119,20 @@ def summarize_market_news(news_items):
     
     prompt = (
         "You are an Elite Macro-Crypto Market Strategist. Analyze the following news items and produce a deep-insight report in THAI. "
-        "Your goal is to connect news events to 'Liquidity & Money Flow' and interest rate expectations.\n\n"
+        "Your goal is to connect news events to 'Liquidity & Money Flow' and interest rate expectations. "
+        "### CORE MISSION: CROSS-SOURCE CORRELATION\n"
+        "- Connect Macro data (Fed/Inflation) directly to Crypto Risk Appetite.\n"
+        "- Explain how 1st-order events (e.g., Fed Rates) lead to 2nd-order Crypto effects (e.g., Stablecoin minting, Whale behavior).\n"
+        "- Identify if multiple sources are pointing to the same liquidity shift.\n\n"
         "### REPORT STRUCTURE (MANDATORY):\n"
         "1. 📊 <b>สรุปภาวะตลาด (Executive Summary):</b>\n"
-        "   - One powerful paragraph synthesizing the overall market mood and the most critical macro theme.\n\n"
+        "   - One powerful paragraph synthesizing the overall market mood. You MUST correlate macro trends with current crypto price action.\n\n"
         "2. <b>[Category Name]</b>\n"
         "   - Use these categories: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].\n"
         "   - Format each news item as:\n"
         "     📰 <b>[Headline]</b>\n"
-        "     <blockquote>[Deep analytical summary in Thai]</blockquote>\n"
-        "     <b>Impact:</b> [Bullish/Bearish/Neutral] + brief reason.\n"
+        "     <blockquote>[Deep analytical summary in Thai focusing on Macro-to-Crypto liquidity correlation]</blockquote>\n"
+        "     <b>Impact:</b> [Bullish/Bearish/Neutral] + brief 2nd-order rationale.\n"
         "   - Separate individual news items with a blank line.\n\n"
         "### FORMATTING RULES (STRICT):\n"
         "- Use <b>...</b> for bold headers and important entities.\n"
@@ -100,7 +149,7 @@ def summarize_market_news(news_items):
     completion = client.chat.completions.create(
         model=GROQ_MODEL,
         messages=[
-            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY <b>, <i>, <code>, <blockquote>. Strip all attributes. Escape all special characters like <, >, & except for these tags."},
+            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY <b>, <i>, <code>, <blockquote>. Strip all attributes. Escape all special characters like <, >, & except for these tags. NOTE: Hacker News data represents technological sentiment and institutional tech shifts."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.4,
@@ -210,14 +259,22 @@ def send_telegram_message(text):
     return success
 
 def main():
-    logger.info("Starting Crypto Intelligence Bot (v2.12 - Structural Hardening)...")
+    logger.info("Starting Crypto Intelligence Bot (v2.14 - Macro-Crypto Correlation Engine)...")
     
+    # 1. Fetch RSS feeds
     news_items = get_aggregated_news(RSS_FEEDS, limit=LIMIT_PER_SOURCE)
+    
+    # 2. Fetch Hacker News (Silicon Valley Tech Perspective)
+    hn_news = get_hn_crypto_news(limit=LIMIT_PER_SOURCE)
+    if hn_news:
+        news_items.extend(hn_news)
+        
     if not news_items:
         logger.warning("No news items retrieved. Exiting.")
         return
     
     if len(news_items) > MAX_TOTAL_NEWS:
+        logger.info(f"Clipping news items from {len(news_items)} to {MAX_TOTAL_NEWS}")
         news_items = news_items[:MAX_TOTAL_NEWS]
         
     logger.info(f"Analyzing {len(news_items)} news items...")
@@ -231,10 +288,6 @@ def main():
     send_telegram_message(summary_text)
     
     logger.info("Process completed successfully.")
-
-if __name__ == "__main__":
-    main()
-
 
 if __name__ == "__main__":
     main()
