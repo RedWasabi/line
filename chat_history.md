@@ -210,7 +210,13 @@
 - **Splitter Optimization:** Simplified the smart splitting logic to no longer track or balance blockquotes, reducing the risk of HTML parsing errors.
 
 ## 37. Typography & Formatting Polish (v2.8)
-- **Newline Cleanup:** Fixed a bug where the bot displayed literal `\n` characters instead of real line breaks. Added double-layered protection: clearer LLM instructions and a Python `.replace()` safety net.
-- **Readability Enhancement:** Addressed the "small word" issue by restricting fixed-width `<code>` tags to price values and tickers only. Standard text now uses the device's default font for significantly better readability.
-- **Visual Spacing:** Refined the Emoji Card layout with bold headers and consistent blank lines between news items to improve mobile scannability.
+- **Newline Cleanup:** Fixed a bug where the bot displayed literal `\n` characters instead of real line breaks.
+- **Readability Enhancement:** Addressed the "small word" issue by restricting fixed-width `<code>` tags to price values and tickers only.
+
+## 38. Bulletproof Delivery & UI Revert (v2.9)
+- **Blockquote Revert:** Reverted the News Bot UI back to the `<blockquote>` style based on user feedback.
+- **Tag Stack Upgrade:** Updated the `send_telegram_message` logic to track `blockquote` tags across paginated messages, ensuring they close and reopen correctly at page boundaries.
+- **HTML Sanitization:** Implemented a robust "Bulletproof Sanitizer" that pre-processes LLM output to fix common hallucinations (like `<strong>` or `<p>`) and strips any unsupported tags.
+- **Delivery Reliability:** This fix resolved a critical bug where initial pages (1 and 2) of a report were missing due to Telegram's strict HTML parser rejecting malformed content.
+- **Split-Point Safeguard:** Improved the text splitter to never break in the middle of an HTML tag.
 

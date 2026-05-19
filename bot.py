@@ -76,12 +76,13 @@ def summarize_market_news(news_items):
         "   - Use these categories: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].\n"
         "   - Format each news item as:\n"
         "     📰 <b>[Headline]</b>\n"
-        "     [Deep analytical summary in Thai]\n"
+        "     <blockquote>[Deep analytical summary in Thai]</blockquote>\n"
         "     <b>Impact:</b> [Bullish/Bearish/Neutral] + brief reason.\n"
         "   - Separate individual news items with a blank line.\n\n"
         "### FORMATTING RULES (STRICT):\n"
         "- Use <b>...</b> for bold headers and important entities (e.g., <b>Fed</b>, <b>BlackRock</b>).\n"
         "- Use <code>...</code> tags ONLY for price values or short tickers (e.g., <code>$65,000</code>, <code>BTC</code>). Do NOT use it for long sentences.\n"
+        "- Use <blockquote>...</blockquote> for the analytical summary text.\n"
         "- Use structural emojis for professional visual scanning.\n"
         "- If a category has no relevant news, write: 'ไม่มีความเคลื่อนไหวสำคัญในหมวดหมู่นี้'\n\n"
         "--- NEWS DATA ---\n"
@@ -93,7 +94,7 @@ def summarize_market_news(news_items):
     completion = client.chat.completions.create(
         model="openrouter/owl-alpha",
         messages=[
-            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>. NEVER use <blockquote>, <br>, <p>, or <div>. Output ACTUAL newlines, not the literal character \\n."},
+            {"role": "system", "content": "You are a senior macro-financial analyst providing high-signal intelligence for Telegram. CRITICAL: Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>, <blockquote>. NEVER use <br>, <p>, or <div>. Output ACTUAL newlines, not the literal character \\n."},
             {"role": "user", "content": prompt}
         ],
         temperature=0.4,
@@ -108,7 +109,31 @@ def send_telegram_message(text):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("Error: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID environment variable is not set.")
         return False
-        
+
+    # --- Step 1: Bulletproof HTML Sanitization ---
+    # This ensures Telegram's strict parser never rejects a message due to LLM hallucinations.
+    import re
+    
+    # a. Convert common hallucinations to allowed tags
+    text = text.replace("<strong>", "<b>").replace("</strong>", "</b>")
+    text = text.replace("<em>", "<i>").replace("</em>", "</i>")
+    
+    # b. Convert paragraphs to newlines
+    text = re.sub(r"<p\b[^>]*>", "", text)
+    text = text.replace("</p>", "\n\n")
+    
+    # c. Strip all other tags except <b>, <i>, <code>, <blockquote>
+    # This is a safe regex that removes any tag not in our whitelist.
+    allowed_tags = ["b", "i", "code", "blockquote"]
+    def sanitize(match):
+        tag_full = match.group(0)
+        tag_name = match.group(2).lower()
+        if tag_name in allowed_tags:
+            return tag_full
+        return ""
+    
+    text = re.sub(r"<(/?)(\w+)\b[^>]*>", sanitize, text)
+
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     MAX_LEN = 4000
     
@@ -117,14 +142,12 @@ def send_telegram_message(text):
         stack = list(current_stack)
         import re
         # Find all tags (opening or closing)
-        all_tags = re.findall(r"<(/?)(b|i|code)>", html_chunk)
+        all_tags = re.findall(r"<(/?)(b|i|code|blockquote)>", html_chunk)
         for is_closing, tag_name in all_tags:
             if is_closing:
-                # If we see a closing tag, pop it from the stack if it matches the top
                 if stack and stack[-1] == tag_name:
                     stack.pop()
             else:
-                # If we see an opening tag, push it onto the stack
                 stack.append(tag_name)
         return stack
 
@@ -133,35 +156,33 @@ def send_telegram_message(text):
     active_stack = []
 
     while len(remaining_text) > 0:
-        # Buffer for pagination indicators and tags
         limit = MAX_LEN - 150
         
         if len(remaining_text) <= limit and not active_stack:
             parts.append(remaining_text)
             break
             
-        # Find a split point (double newline preferred)
         split_idx = remaining_text.rfind("\n\n", 0, limit)
         if split_idx == -1:
             split_idx = remaining_text.rfind("\n", 0, limit)
         if split_idx == -1:
             split_idx = min(limit, len(remaining_text))
             
+            # --- Step 4: Fix Split-Point Rupture ---
+            # Never split inside an HTML tag (e.g., <blo)
+            last_open = remaining_text.rfind("<", 0, split_idx)
+            last_close = remaining_text.rfind(">", 0, split_idx)
+            if last_open > last_close:
+                split_idx = last_open
+            
         current_chunk = remaining_text[:split_idx]
-        
-        # Calculate what the stack will look like AFTER this chunk
         next_stack = update_tag_stack(active_stack, current_chunk)
         
-        # Wrap the chunk: 
-        # 1. Opening tags from previous parts
-        # 2. The actual chunk content
-        # 3. Closing tags that remain open after this chunk
         prefix = "".join([f"<{t}>" for t in active_stack])
         suffix = "".join([f"</{t}>" for t in reversed(next_stack)])
         
         parts.append(prefix + current_chunk + suffix)
         
-        # Advance
         remaining_text = remaining_text[split_idx:].strip()
         active_stack = next_stack
 

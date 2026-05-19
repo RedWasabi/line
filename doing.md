@@ -9,13 +9,16 @@
     - **Parsing & Performance Fix (v2.4)**:
         - Implemented strict HTML sanitization to strip unsupported `<br>` tags that caused Telegram delivery failures.
         - Optimized performance by capping analysis to the top 20 most relevant news items, reducing latency and GitHub Action execution time.
+    - **Bulletproof Delivery Fix (v2.9)**:
+        - Reverted UI to `<blockquote>` style as requested.
+        - Implemented a "Bulletproof Sanitizer" that automatically fixes hallucinated tags (e.g., `<strong>`, `<p>`) and strips unsupported HTML.
+        - Resolved the "Missing Pages" bug (where parts 1 and 2 failed) by upgrading the tag-stack tracker to support `blockquote` and preventing splits inside HTML tags.
     - **Typography & Formatting Polish (v2.8)**:
         - Fixed a bug where literal `\n` characters were displayed in Telegram.
         - Improved readability by restricting `<code>` tags to quantities and tickers, preventing the "small word" effect on mobile.
         - Refined the layout with bold headers and optimized spacing.
-    - **Emoji Card Style UI (v2.7)**:
-        - Redesigned the report aesthetic to use a clean emoji-based layout (`📰 Headline`).
-        - Completely removed the `<blockquote>` tag to eliminate nested formatting issues and improve cross-page delivery reliability.
+    - **Emoji Card Style UI (v2.7) [REVERTED]**:
+        - Replaced by v2.9 Blockquote style for better visual structure.
     - Thai-language summaries via OpenRouter.
     - **High-Impact Sources (v2.1)**: Integrated Glassnode (On-chain), SEC (Regulatory), and CNBC Finance (Macro).
     - **Executive Summary (v2)**: Added top-level TL;DR for market mood.
