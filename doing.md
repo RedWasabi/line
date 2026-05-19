@@ -9,10 +9,21 @@
     - **Parsing & Performance Fix (v2.4)**:
         - Implemented strict HTML sanitization to strip unsupported `<br>` tags that caused Telegram delivery failures.
         - Optimized performance by capping analysis to the top 20 most relevant news items, reducing latency and GitHub Action execution time.
-    - **Bulletproof Delivery Fix (v2.9)**:
-        - Reverted UI to `<blockquote>` style as requested.
-        - Implemented a "Bulletproof Sanitizer" that automatically fixes hallucinated tags (e.g., `<strong>`, `<p>`) and strips unsupported HTML.
-        - Resolved the "Missing Pages" bug (where parts 1 and 2 failed) by upgrading the tag-stack tracker to support `blockquote` and preventing splits inside HTML tags.
+    - **Groq Restoration (v2.11)**:
+        - Migrated back to Groq API using `llama-3.3-70b-versatile` for high-speed inference.
+        - Replaced `openai` SDK with `groq` SDK.
+        - Preserved all v2.10 Bulletproof Delivery and HTML sanitization logic.
+    - **Bulletproof Delivery Fix (v2.10)**:
+
+        - Implemented a "Bulletproof Sanitizer" that strips all tag attributes (preventing 400 errors from hallucinated styles).
+        - Added mandatory HTML escaping for non-tag characters (handles stray `<` or `&` from LLM).
+        - Refined splitting logic to ALWAYS check for tag rupture and ensure progress, preventing infinite loops.
+        - Verified that whitelisted tags (`<b>`, `<i>`, `<code>`, `<blockquote>`) are preserved and correctly balanced across parts.
+        - Resolved the "Missing Pages" issue where parts 1 and 2 were rejected by Telegram due to malformed HTML.
+    - **Bulletproof Delivery Fix (v2.9) [SUPERSEDED]**:
+        - Reverted UI to `<blockquote>` style.
+        - Initial tag-stack tracker implementation.
+
     - **Typography & Formatting Polish (v2.8)**:
         - Fixed a bug where literal `\n` characters were displayed in Telegram.
         - Improved readability by restricting `<code>` tags to quantities and tickers, preventing the "small word" effect on mobile.
