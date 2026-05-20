@@ -1,6 +1,6 @@
 # Technical Summary: Binance Screening Bot Intelligence Engine
 
-**Version:** 3.6 (Volume Sentiment & Dynamic Volatility)
+**Version:** 3.8 (Unified Reporting & Top 30 Discovery)
 **Architecture:** Multi-Layer State Machine with Volume-Weighted Intelligence
 
 ---
