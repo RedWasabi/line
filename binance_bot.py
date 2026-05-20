@@ -327,8 +327,7 @@ def main():
         "gainer_l2": [],
         "loser_l1": [],
         "loser_l2": [],
-        "surges": [], # New section for extreme volume
-        "fading": [] # New section for fading interest
+        "surges": []
     }
     
     for symbol, coin in state.items():
@@ -410,12 +409,9 @@ def main():
             }
             report_data[final_layer].append(item_data)
             
-            # Extreme Volume Discovery Section
+            # Discovery Logic for Surge List
             if rvol > 3.0:
                 report_data["surges"].append(item_data)
-            # Fading Interest Section (Only for coins already in watchlist)
-            elif rvol < 0.5:
-                report_data["fading"].append(item_data)
         
         if 'rev' in coin:
             coin['rev'] = False
@@ -427,9 +423,9 @@ def main():
         
         # Helper to avoid duplicate logic in reporting
         for layer_key, coins_list in report_data.items():
-            # Sort by time on watchlist (thc) for standard layers, or RVol for surges/fading
-            if layer_key in ["surges", "fading"]:
-                sorted_coins = sorted(coins_list, key=lambda x: x['rvol'], reverse=(layer_key == "surges"))
+            # Sort by time on watchlist (thc) for standard layers, or RVol for surges
+            if layer_key == "surges":
+                sorted_coins = sorted(coins_list, key=lambda x: x['rvol'], reverse=True)
             else:
                 sorted_coins = sorted(coins_list, key=lambda x: x['coin']['thc'], reverse=True)
             
@@ -446,8 +442,11 @@ def main():
                 st_str = format_price(coin['st']) if coin['st'] else "N/A"
                 
                 # Volume Sentiment Tag
-                sent_tag, _ = get_volume_sentiment(rvol)
+                sent_tag, sent_emoji = get_volume_sentiment(rvol)
                 vol_sent_str = f" | Vol: {sent_tag} (<b>{rvol:.1f}x</b>)" if sent_tag else f" | Vol: <b>{rvol:.1f}x</b>"
+                
+                # Visual Skimmability Tag (Emoji Only) for main lists
+                status_emoji = f" {sent_emoji}" if sent_emoji in ["🧊", "💤"] else ""
                 
                 rev_tag = ""
                 if coin.get('rev'):
@@ -463,7 +462,7 @@ def main():
                     ip = (curr_price - coin['st']) / coin['st'] * 100
                     dh = (coin['hp'] - curr_price) / coin['hp'] * 100
                     final_report_strings["gainer_l1"].append(
-                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
                         f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>{vol_sent_str}\n"
                         f"  Inc: <b>{ip:+.2f}%</b> | Drop: <b>{dh:.2f}%</b>\n"
@@ -476,7 +475,7 @@ def main():
                     np = (curr_price - coin['st']) / coin['st'] * 100
                     rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
                     final_report_strings["gainer_l2"].append(
-                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
                         f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>{vol_sent_str}\n"
                         f"  Net: <b>{np:+.2f}%</b> | Bounce: <b>{bp:+.2f}%</b>\n"
@@ -488,7 +487,7 @@ def main():
                     dp = (coin['st'] - curr_price) / coin['st'] * 100
                     bh = (curr_price - coin['lp']) / coin['lp'] * 100
                     final_report_strings["loser_l1"].append(
-                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
                         f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>{vol_sent_str}\n"
                         f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
@@ -501,7 +500,7 @@ def main():
                     np = (coin['st'] - curr_price) / coin['st'] * 100
                     rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
                     final_report_strings["loser_l2"].append(
-                        f"<b>• {symbol}</b>{rev_tag}\n"
+                        f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
                         f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>{vol_sent_str}\n"
                         f"  Net: <b>{np:+.2f}%</b> | Drop: <b>{dropp:.2f}%</b>\n"
@@ -510,14 +509,9 @@ def main():
                     )
                 elif layer_key == "surges":
                     final_report_strings["surges"].append(
-                        f"<b>• {symbol}</b> | {sent_tag} (<b>{rvol:.1f}x</b>)\n"
+                        f"<b>• {symbol}</b>{status_emoji} | {sent_tag} (<b>{rvol:.1f}x</b>)\n"
                         f"  Price: <code>{p_str}</code> | 24h: <b>{ch24:+.2f}%</b>\n"
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)"
-                    )
-                elif layer_key == "fading":
-                    final_report_strings["fading"].append(
-                        f"<b>• {symbol}</b> | {sent_tag} (<b>{rvol:.1f}x</b>)\n"
-                        f"  Price: <code>{p_str}</code> | Time: {thc_str}"
                     )
 
         # 5. Format & Send Telegram Messages
@@ -528,8 +522,7 @@ def main():
             ("🔥 <b>Gainer (L1 - Momentum)</b>", "gainer_l1"),
             ("🏥 <b>Gainer L2 (Recovery)</b>", "gainer_l2"),
             ("🩸 <b>Loser (L1 - Bottoming)</b>", "loser_l1"),
-            ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2"),
-            ("💤 <b>Fading Interest (Stalling)</b>", "fading")
+            ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
         ]
         
         first_section_msg = True

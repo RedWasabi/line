@@ -23,6 +23,9 @@
         - **Causal Analysis**: LLM prompt now mandates "Cross-Source Correlation"—linking macro events (1st-order) to crypto liquidity/adoption shifts (2nd-order).
         - **Priority Sorting**: High-signal news is presented first to ensure analytical focus on market-moving themes.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
+    - **Unified Reporting Architecture (v3.8)**:
+        - **5-List Structure**: Streamlined reports from 7 sections down to 5 (Surges, Gainer L1/L2, Loser L1/L2).
+        - **Inline Sentiment Emojis**: Integrated 🧊 (Lost) and 💤 (Fading) indicators directly into main lists to preserve data density while improving skimmability.
     - **Discovery Scope Expansion (v3.7)**:
         - **Top 30 Scan**: Increased surveillance range from Top 20 to Top 30 Gainers/Losers.
         - **Enhanced Breakout Detection**: Allows high-conviction (RVol > 3.5x) coins to be discovered deeper in the leaderboard.

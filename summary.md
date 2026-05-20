@@ -57,13 +57,22 @@ The bot scans the Top 30 24h Gainers/Losers.
 - If a coin is in the Top 10, it is added to L1 immediately.
 - If a coin is between Rank 11-30 but has **Explosive Volume (RVol > 3.5x)**, it is added to the watchlist immediately to catch breakouts before they hit the main list.
 
----
+## 5. Unified Reporting (Streamlined 5-List View)
+To maximize skimmability, the bot consolidates all data into 5 high-signal sections. Stalled conviction is indicated via emojis directly in the main lists:
 
-## 5. Reporting & Infrastructure
-- **Intra-tick Precision**: Uses 15-minute Klines to capture spikes and dips that occur between polling cycles.
-- **Hourly Telegram Reports**: Gates notifications using `REPORT_INTERVAL_SEC` (~55 mins) while maintaining high-frequency (15m) state polling.
-- **Persistence**: State is stored in a GitHub Gist (`watchlist.json`) to survive server restarts.
-- **Metrics Tracked**:
-    - `ST`: Start Price (Price at discovery).
-    - `Net %`: Total performance from `ST` to current price.
-    - `HC/THC`: Tick counters to track time on list and delisting deadlines.
+1.  **🚀 Volume Surge**: Discovery of coins with `RVol > 3.0x`.
+2.  **🔥 Gainer L1**: Active bullish momentum.
+3.  **🏥 Gainer L2**: Bullish correction/recovery zones.
+4.  **🩸 Loser L1**: Active bearish bottoming.
+5.  **📉 Loser L2**: Bearish bounce/Dead cat zones.
+
+### Stalled Conviction Indicators
+- **🧊 Lost Interest**: `RVol <= 0.3x` (Interest has evaporated).
+- **💤 Fading Interest**: `RVol <= 0.5x` (Hype is cooling down).
+These emojis appear next to the symbol name (e.g., `• BTCUSDT 💤`) to signal caution without hiding price data.
+
+## 6. Infrastructure
+- **Intra-tick Precision**: Uses 15-minute Klines to capture spikes and dips.
+- **Volume Zone Tracking**: Each entry includes classification (🐳 Institutional, 🐬 Healthy, 🐟 Retail).
+- **Hourly Reports**: Gates notifications via `REPORT_INTERVAL_SEC`.
+- **Persistence**: GitHub Gist (`watchlist.json`) state management.
