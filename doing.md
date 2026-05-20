@@ -23,6 +23,19 @@
         - **Causal Analysis**: LLM prompt now mandates "Cross-Source Correlation"—linking macro events (1st-order) to crypto liquidity/adoption shifts (2nd-order).
         - **Priority Sorting**: High-signal news is presented first to ensure analytical focus on market-moving themes.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
+    - **Volume Sentiment Analysis (v3.6)**:
+        - **Relative Volume (RVol)**: Implemented 5-hour lookback to calculate current volume vs. average.
+        - **Dynamic Tagging**: Added tags for ⚡ Explosive, 📈 Growing, 💤 Fading, and 🧊 Lost interest.
+        - **Surge Discovery**: Expanded scan to Top 20 pairs; coins with >3.5x RVol are added immediately.
+        - **New Report Sections**: Added **🚀 Volume Surge** (High Interest) and **💤 Fading Interest** summary blocks.
+    - **Dynamic Volatility Thresholds (v3.5)**:
+        - **Volume-Weighted Sensitivity**: Replaced the static 10% threshold with a dynamic `get_dynamic_drop_threshold` function.
+        - **Institutional (>20M)**: 6% (sensitive for high liquidity).
+        - **Healthy (5M-20M)**: 10% (standard mid-cap).
+        - **Retail (1M-5M)**: 15% (noise reduction for low liquidity).
+    - **Enhanced L2 Tracking (v3.5)**: 
+        - Reports now display the **Starting Price (ST)** for L2 recovery/dead-cat states.
+        - Added **Net % Change** metric to track total performance from discovery to current price.
     - **Structural Hardening (v3.4)**:
         - **Timestamp-Based Reporting**: Replaced fragile tick-based counters with absolute time checks (`REPORT_INTERVAL_SEC`), ensuring reliable hourly reports despite cloud runner jitter.
         - **Logging Migration**: Implemented the `logging` module for professional auditing.
