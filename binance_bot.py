@@ -255,15 +255,15 @@ def main():
         and float(t.get('bidPrice', 0)) > 0
     ]
     
-    # Sort to find Top 20 Gainers and Top 20 Losers (24h change)
+    # Sort to find Top 30 Gainers and Top 30 Losers (24h change)
     sorted_tickers = sorted(usdt_tickers, key=lambda x: float(x['priceChangePercent']), reverse=True)
-    top_gainers = sorted_tickers[:20]
-    top_losers = sorted_tickers[-20:]
+    top_gainers = sorted_tickers[:30]
+    top_losers = sorted_tickers[-30:]
 
     ticker_map = {t['symbol']: t for t in usdt_tickers}
     
     # 3. Add New Coins & Handle Trend Crossovers (Ultimate Reversal & Surge Discovery)
-    # Filter for candidates: Top 10 by price OR any of Top 20 with RVol > 3.5
+    # Filter for candidates: Top 10 by price OR any of Top 30 with RVol > 3.5
     for i, t in enumerate(top_gainers):
         symbol = t['symbol']
         curr_price = float(t['lastPrice'])
@@ -275,7 +275,7 @@ def main():
             _, _, rvol = get_volume_stats(symbol)
             is_surge = rvol > 3.5
 
-        # Add if in Top 10 OR is a Volume Surge candidate in Top 20
+        # Add if in Top 10 OR is a Volume Surge candidate in Top 30
         if symbol not in state or state[symbol]['layer'].startswith('loser'):
             if i < 10 or is_surge:
                 if symbol in state:

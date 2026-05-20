@@ -23,11 +23,10 @@
         - **Causal Analysis**: LLM prompt now mandates "Cross-Source Correlation"—linking macro events (1st-order) to crypto liquidity/adoption shifts (2nd-order).
         - **Priority Sorting**: High-signal news is presented first to ensure analytical focus on market-moving themes.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
+    - **Discovery Scope Expansion (v3.7)**:
+        - **Top 30 Scan**: Increased surveillance range from Top 20 to Top 30 Gainers/Losers.
+        - **Enhanced Breakout Detection**: Allows high-conviction (RVol > 3.5x) coins to be discovered deeper in the leaderboard.
     - **Volume Sentiment Analysis (v3.6)**:
-        - **Relative Volume (RVol)**: Implemented 5-hour lookback to calculate current volume vs. average.
-        - **Dynamic Tagging**: Added tags for ⚡ Explosive, 📈 Growing, 💤 Fading, and 🧊 Lost interest.
-        - **Surge Discovery**: Expanded scan to Top 20 pairs; coins with >3.5x RVol are added immediately.
-        - **New Report Sections**: Added **🚀 Volume Surge** (High Interest) and **💤 Fading Interest** summary blocks.
     - **Dynamic Volatility Thresholds (v3.5)**:
         - **Volume-Weighted Sensitivity**: Replaced the static 10% threshold with a dynamic `get_dynamic_drop_threshold` function.
         - **Institutional (>20M)**: 6% (sensitive for high liquidity).

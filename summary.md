@@ -52,10 +52,10 @@ The bot uses **Relative Volume (RVol)** to gauge trader conviction. It calculate
 ### Ultimate Reversal (Trend Crossover)
 If a coin in a "Loser" state suddenly enters the Top 10 Gainers (or vice-versa), the bot performs an **Ultimate Reversal**, resetting its state and tagging it with a 🔄 Bullish/Bearish Reversal emoji in Telegram.
 
-### Surge Discovery (Top 20 Scan)
-The bot scans the Top 20 24h Gainers/Losers. 
+### Surge Discovery (Top 30 Scan)
+The bot scans the Top 30 24h Gainers/Losers. 
 - If a coin is in the Top 10, it is added to L1 immediately.
-- If a coin is between Rank 11-20 but has **Explosive Volume (RVol > 3.5x)**, it is added to the watchlist immediately to catch breakouts before they hit the main list.
+- If a coin is between Rank 11-30 but has **Explosive Volume (RVol > 3.5x)**, it is added to the watchlist immediately to catch breakouts before they hit the main list.
 
 ---
 
