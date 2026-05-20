@@ -110,26 +110,52 @@ def get_binance_tickers():
         logger.error(f"Error fetching Binance data: {e}")
         return []
 
-def get_recent_high_low(symbol):
-    """Fetches the high and low of the last two 15m candles to capture intra-tick spikes."""
+def get_volume_stats(symbol, limit=21):
+    """
+    Fetches klines to calculate recent high/low and Relative Volume (RVol).
+    limit=21 allows for 1 current kline + 20 previous klines for average.
+    """
     url = f"{BINANCE_BASE_URL}/klines"
-    params = {"symbol": symbol, "interval": "15m", "limit": 2}
+    params = {"symbol": symbol, "interval": "15m", "limit": limit}
     try:
         response = requests.get(url, params=params)
         if response.status_code == 200:
             klines = response.json()
-            if not klines:
-                return None, None
-            # Extract High (index 2) and Low (index 3) from both candles
-            highs = [float(k[2]) for k in klines]
-            lows = [float(k[3]) for k in klines]
-            return max(highs), min(lows)
+            if not klines or len(klines) < 2:
+                return None, None, 0.0
+            
+            # High/Low from last 2 candles (intra-tick spikes)
+            recent_highs = [float(k[2]) for k in klines[-2:]]
+            recent_lows = [float(k[3]) for k in klines[-2:]]
+            
+            # RVol Calculation (Current 15m candle volume vs average of previous 20)
+            current_vol = float(klines[-1][5]) # Volume is index 5
+            prev_vols = [float(k[5]) for k in klines[:-1]]
+            avg_vol = sum(prev_vols) / len(prev_vols) if prev_vols else 0
+            
+            rvol = current_vol / avg_vol if avg_vol > 0 else 0
+            
+            return max(recent_highs), min(recent_lows), rvol
         else:
             logger.error(f"Klines API Error for {symbol}: {response.status_code}")
-            return None, None
+            return None, None, 0.0
     except Exception as e:
         logger.error(f"Error fetching Klines for {symbol}: {e}")
-        return None, None
+        return None, None, 0.0
+
+def get_volume_sentiment(rvol):
+    """Returns a sentiment tag and emoji based on RVol."""
+    if rvol >= 5.0:
+        return "🚀 <b>Explosive</b>", "⚡"
+    elif rvol >= 3.5:
+        return "🔥 <b>Spiking</b>", "🔥"
+    elif rvol >= 2.0:
+        return "📈 <b>Growing</b>", "📈"
+    elif rvol <= 0.3:
+        return "🧊 <b>Lost</b>", "🧊"
+    elif rvol <= 0.5:
+        return "💤 <b>Fading</b>", "💤"
+    return None, None
 
 def send_telegram_message(text):
     """Sends the report to Telegram."""
@@ -229,53 +255,70 @@ def main():
         and float(t.get('bidPrice', 0)) > 0
     ]
     
-    # Sort to find Top 10 Gainers and Top 10 Losers (24h change)
+    # Sort to find Top 20 Gainers and Top 20 Losers (24h change)
     sorted_tickers = sorted(usdt_tickers, key=lambda x: float(x['priceChangePercent']), reverse=True)
-    top_gainers = sorted_tickers[:10]
-    top_losers = sorted_tickers[-10:]
+    top_gainers = sorted_tickers[:20]
+    top_losers = sorted_tickers[-20:]
 
     ticker_map = {t['symbol']: t for t in usdt_tickers}
     
-    # 3. Add New Coins & Handle Trend Crossovers (Ultimate Reversal)
-    for t in top_gainers:
+    # 3. Add New Coins & Handle Trend Crossovers (Ultimate Reversal & Surge Discovery)
+    # Filter for candidates: Top 10 by price OR any of Top 20 with RVol > 3.5
+    for i, t in enumerate(top_gainers):
         symbol = t['symbol']
         curr_price = float(t['lastPrice'])
         
-        # New coin OR Trend Crossover (Loser -> Gainer)
-        if symbol not in state or state[symbol]['layer'].startswith('loser'):
-            if symbol in state:
-                logger.info(f"🔄 Reversal: Moving {symbol} from Loser to Gainer L1")
-            
-            state[symbol] = {
-                "layer": "gainer_l1",
-                "st": curr_price,
-                "hp": curr_price,
-                "lp": None,
-                "hc": 0,
-                "thc": 0,
-                "rev": True if symbol in state else False
-            }
-            logger.info(f"Added {symbol} to Gainer L1")
+        # We check volume stats for discovery if not in state
+        rvol = 0.0
+        is_surge = False
+        if symbol not in state:
+            _, _, rvol = get_volume_stats(symbol)
+            is_surge = rvol > 3.5
 
-    for t in top_losers:
+        # Add if in Top 10 OR is a Volume Surge candidate in Top 20
+        if symbol not in state or state[symbol]['layer'].startswith('loser'):
+            if i < 10 or is_surge:
+                if symbol in state:
+                    logger.info(f"🔄 Reversal: Moving {symbol} from Loser to Gainer L1")
+                
+                state[symbol] = {
+                    "layer": "gainer_l1",
+                    "st": curr_price,
+                    "hp": curr_price,
+                    "lp": None,
+                    "hc": 0,
+                    "thc": 0,
+                    "rev": True if symbol in state else False,
+                    "rvol": rvol
+                }
+                logger.info(f"Added {symbol} to Gainer L1{' (Surge Discovery)' if is_surge else ''}")
+
+    for i, t in enumerate(top_losers):
         symbol = t['symbol']
         curr_price = float(t['lastPrice'])
         
-        # New coin OR Trend Crossover (Gainer -> Loser)
+        rvol = 0.0
+        is_surge = False
+        if symbol not in state:
+            _, _, rvol = get_volume_stats(symbol)
+            is_surge = rvol > 3.5
+
         if symbol not in state or state[symbol]['layer'].startswith('gainer'):
-            if symbol in state:
-                logger.info(f"🔄 Reversal: Moving {symbol} from Gainer to Loser L1")
-                
-            state[symbol] = {
-                "layer": "loser_l1",
-                "st": curr_price,
-                "lp": curr_price,
-                "hp": None,
-                "hc": 0,
-                "thc": 0,
-                "rev": True if symbol in state else False
-            }
-            logger.info(f"Added {symbol} to Loser L1")
+            if i < 10 or is_surge:
+                if symbol in state:
+                    logger.info(f"🔄 Reversal: Moving {symbol} from Gainer to Loser L1")
+                    
+                state[symbol] = {
+                    "layer": "loser_l1",
+                    "st": curr_price,
+                    "lp": curr_price,
+                    "hp": None,
+                    "hc": 0,
+                    "thc": 0,
+                    "rev": True if symbol in state else False,
+                    "rvol": rvol
+                }
+                logger.info(f"Added {symbol} to Loser L1{' (Surge Discovery)' if is_surge else ''}")
 
     # 4. Process State Transitions & Collect Data for Reports
     new_state = {}
@@ -283,7 +326,9 @@ def main():
         "gainer_l1": [],
         "gainer_l2": [],
         "loser_l1": [],
-        "loser_l2": []
+        "loser_l2": [],
+        "surges": [], # New section for extreme volume
+        "fading": [] # New section for fading interest
     }
     
     for symbol, coin in state.items():
@@ -295,8 +340,9 @@ def main():
         vol_usd = float(ticker['quoteVolume'])
         ch24 = float(ticker['priceChangePercent'])
         
-        # Fetch Intra-tick Spikes (15m Klines)
-        k_high, k_low = get_recent_high_low(symbol)
+        # Fetch Intra-tick Spikes (15m Klines) & Calculate RVol
+        k_high, k_low, rvol = get_volume_stats(symbol)
+        coin['rvol'] = rvol # Update stored rvol
         
         current_layer = coin['layer']
         
@@ -354,13 +400,22 @@ def main():
         # Collect data for Reports (Only if we are sending)
         if should_send:
             final_layer = coin['layer']
-            report_data[final_layer].append({
+            item_data = {
                 "symbol": symbol,
                 "coin": coin.copy(),
                 "curr_price": curr_price,
                 "vol_usd": vol_usd,
-                "ch24": ch24
-            })
+                "ch24": ch24,
+                "rvol": rvol
+            }
+            report_data[final_layer].append(item_data)
+            
+            # Extreme Volume Discovery Section
+            if rvol > 3.0:
+                report_data["surges"].append(item_data)
+            # Fading Interest Section (Only for coins already in watchlist)
+            elif rvol < 0.5:
+                report_data["fading"].append(item_data)
         
         if 'rev' in coin:
             coin['rev'] = False
@@ -370,8 +425,13 @@ def main():
     if should_send:
         final_report_strings = {k: [] for k in report_data.keys()}
         
+        # Helper to avoid duplicate logic in reporting
         for layer_key, coins_list in report_data.items():
-            sorted_coins = sorted(coins_list, key=lambda x: x['coin']['thc'], reverse=True)
+            # Sort by time on watchlist (thc) for standard layers, or RVol for surges/fading
+            if layer_key in ["surges", "fading"]:
+                sorted_coins = sorted(coins_list, key=lambda x: x['rvol'], reverse=(layer_key == "surges"))
+            else:
+                sorted_coins = sorted(coins_list, key=lambda x: x['coin']['thc'], reverse=True)
             
             for item in sorted_coins:
                 symbol = item['symbol']
@@ -379,10 +439,15 @@ def main():
                 curr_price = item['curr_price']
                 vol_usd = item['vol_usd']
                 ch24 = item['ch24']
+                rvol = item['rvol']
                 
                 thc_str = format_time(coin['thc'])
                 p_str = format_price(curr_price)
                 st_str = format_price(coin['st']) if coin['st'] else "N/A"
+                
+                # Volume Sentiment Tag
+                sent_tag, _ = get_volume_sentiment(rvol)
+                vol_sent_str = f" | Vol: {sent_tag} (<b>{rvol:.1f}x</b>)" if sent_tag else f" | Vol: <b>{rvol:.1f}x</b>"
                 
                 rev_tag = ""
                 if coin.get('rev'):
@@ -400,7 +465,7 @@ def main():
                     final_report_strings["gainer_l1"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>\n"
+                        f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>{vol_sent_str}\n"
                         f"  Inc: <b>{ip:+.2f}%</b> | Drop: <b>{dh:.2f}%</b>\n"
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
                         f"  Time: {thc_str}"
@@ -413,7 +478,7 @@ def main():
                     final_report_strings["gainer_l2"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>\n"
+                        f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>{vol_sent_str}\n"
                         f"  Net: <b>{np:+.2f}%</b> | Bounce: <b>{bp:+.2f}%</b>\n"
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
                         f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
@@ -425,7 +490,7 @@ def main():
                     final_report_strings["loser_l1"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>\n"
+                        f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>{vol_sent_str}\n"
                         f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
                         f"  Time: {thc_str}"
@@ -438,20 +503,33 @@ def main():
                     final_report_strings["loser_l2"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>\n"
+                        f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>{vol_sent_str}\n"
                         f"  Net: <b>{np:+.2f}%</b> | Drop: <b>{dropp:.2f}%</b>\n"
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
                         f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
+                    )
+                elif layer_key == "surges":
+                    final_report_strings["surges"].append(
+                        f"<b>• {symbol}</b> | {sent_tag} (<b>{rvol:.1f}x</b>)\n"
+                        f"  Price: <code>{p_str}</code> | 24h: <b>{ch24:+.2f}%</b>\n"
+                        f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)"
+                    )
+                elif layer_key == "fading":
+                    final_report_strings["fading"].append(
+                        f"<b>• {symbol}</b> | {sent_tag} (<b>{rvol:.1f}x</b>)\n"
+                        f"  Price: <code>{p_str}</code> | Time: {thc_str}"
                     )
 
         # 5. Format & Send Telegram Messages
         header = "📊 <b>Binance Screening Report (Hourly)</b>"
         
         sections = [
+            ("🚀 <b>Volume Surge (High Interest)</b>", "surges"),
             ("🔥 <b>Gainer (L1 - Momentum)</b>", "gainer_l1"),
             ("🏥 <b>Gainer L2 (Recovery)</b>", "gainer_l2"),
             ("🩸 <b>Loser (L1 - Bottoming)</b>", "loser_l1"),
-            ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
+            ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2"),
+            ("💤 <b>Fading Interest (Stalling)</b>", "fading")
         ]
         
         first_section_msg = True
