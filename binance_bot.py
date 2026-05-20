@@ -23,7 +23,6 @@ BINANCE_TELEGRAM_BOT_TOKEN = os.environ.get("BINANCE_TELEGRAM_BOT_TOKEN")
 BINANCE_TELEGRAM_CHAT_ID = os.environ.get("BINANCE_TELEGRAM_CHAT_ID")
 
 # Strategy Thresholds
-L1_TO_L2_DROP_PCT = 10.0      # 10% drop from high moves L1 -> L2
 L2_RECOVERY_BOUNCE_PCT = 20.0  # 20% bounce from low moves L2 -> L1
 MIN_VOLUME_USD = 1_000_000    # $1M USD minimum daily volume
 DELIST_TICKS_LIMIT = 288      # 72 hours (288 * 15m ticks)
@@ -32,6 +31,19 @@ REPORT_INTERVAL_SEC = 3300    # ~55 mins (ensures 1 report per hour even with ji
 # API Endpoints
 BINANCE_BASE_URL = "https://data-api.binance.vision/api/v3"
 GIST_API_URL = f"https://api.github.com/gists/{GIST_ID}"
+
+def get_dynamic_drop_threshold(vol_usd):
+    """
+    Returns a dynamic drop threshold based on 24h USD volume.
+    High liquidity (Institutional) = Lower threshold (6%)
+    Medium liquidity (Healthy) = Standard threshold (10%)
+    Low liquidity (Retail) = Higher threshold (15%) to filter noise
+    """
+    if vol_usd >= 20_000_000:
+        return 6.0
+    elif vol_usd >= 5_000_000:
+        return 10.0
+    return 15.0
 
 def load_state():
     """Loads the watchlist state from a GitHub Gist."""
@@ -288,6 +300,9 @@ def main():
         
         current_layer = coin['layer']
         
+        # Determine dynamic threshold for L1 -> L2 transition based on volume
+        l1_to_l2_threshold = get_dynamic_drop_threshold(vol_usd)
+        
         if current_layer == "gainer_l1":
             # Track Session High (Momentum)
             obs_high = max(curr_price, k_high) if k_high else curr_price
@@ -295,7 +310,7 @@ def main():
             
             # Check for Drop -> Move to L2 (Recovery)
             drop_check = (coin['hp'] - curr_price) / coin['hp'] * 100
-            if drop_check > L1_TO_L2_DROP_PCT and coin['thc'] > 0:
+            if drop_check > l1_to_l2_threshold and coin['thc'] > 0:
                 coin.update({"layer": "gainer_l2", "lp": curr_price, "hc": 0})
                 
         elif current_layer == "gainer_l2":
@@ -319,7 +334,7 @@ def main():
             
             # Check for Bounce -> Move to L2 (Dead Cat)
             bounce_check = (curr_price - coin['lp']) / coin['lp'] * 100
-            if bounce_check > L1_TO_L2_DROP_PCT and coin['thc'] > 0: # Threshold is symmetric for L1->L2
+            if bounce_check > l1_to_l2_threshold and coin['thc'] > 0: # Threshold is symmetric for L1->L2
                 coin.update({"layer": "loser_l2", "hp": curr_price, "hc": 0})
 
         elif current_layer == "loser_l2":
@@ -393,11 +408,13 @@ def main():
                 elif layer_key == "gainer_l2":
                     lp_str = format_price(coin['lp'])
                     bp = (curr_price - coin['lp']) / coin['lp'] * 100
+                    np = (curr_price - coin['st']) / coin['st'] * 100
                     rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
                     final_report_strings["gainer_l2"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  LP: <code>{lp_str}</code> | Bounce: <b>{bp:+.2f}%</b>\n"
+                        f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>\n"
+                        f"  Net: <b>{np:+.2f}%</b> | Bounce: <b>{bp:+.2f}%</b>\n"
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
                         f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
                     )
@@ -416,11 +433,13 @@ def main():
                 elif layer_key == "loser_l2":
                     hp_str = format_price(coin['hp'])
                     dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
+                    np = (coin['st'] - curr_price) / coin['st'] * 100
                     rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
                     final_report_strings["loser_l2"].append(
                         f"<b>• {symbol}</b>{rev_tag}\n"
                         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  HP: <code>{hp_str}</code> | Drop: <b>{dropp:.2f}%</b>\n"
+                        f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>\n"
+                        f"  Net: <b>{np:+.2f}%</b> | Drop: <b>{dropp:.2f}%</b>\n"
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
                         f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
                     )
@@ -464,10 +483,6 @@ def main():
     new_state['_metadata'] = metadata
     save_state(new_state)
     logger.info("Process completed successfully.")
-
-if __name__ == "__main__":
-    main()
-
 
 if __name__ == "__main__":
     main()
