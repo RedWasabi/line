@@ -110,10 +110,14 @@ def get_binance_tickers():
         logger.error(f"Error fetching Binance data: {e}")
         return []
 
-def get_volume_stats(symbol, limit=21):
+def get_volume_stats(symbol, limit=22):
     """
     Fetches klines to calculate recent high/low and Relative Volume (RVol).
-    limit=21 allows for 1 current kline + 20 previous klines for average.
+    limit=22 allows for:
+    - 1 current kline (klines[-1])
+    - 1 just-closed kline (klines[-2], potentially laggy volume)
+    - 1 finalized kline (klines[-3], used for RVol)
+    - 19 previous klines for average
     """
     url = f"{BINANCE_BASE_URL}/klines"
     params = {"symbol": symbol, "interval": "15m", "limit": limit}
@@ -121,21 +125,20 @@ def get_volume_stats(symbol, limit=21):
         response = requests.get(url, params=params)
         if response.status_code == 200:
             klines = response.json()
-            if not klines or len(klines) < 3:
+            if not klines or len(klines) < 4:
                 return None, None, 0.0
             
             # High/Low from last 2 candles (current + last closed) to catch intra-tick spikes
             recent_highs = [float(k[2]) for k in klines[-2:]]
             recent_lows = [float(k[3]) for k in klines[-2:]]
             
-            # RVol Calculation: Use the last CLOSED 15m candle vs average of previous 19
-            # klines[-1] is the current (incomplete) candle.
-            # klines[-2] is the last full closed candle.
-            last_full_vol = float(klines[-2][5]) 
-            prev_vols = [float(k[5]) for k in klines[:-2]] # All candles before the last closed one
+            # RVol Calculation: Use the "Finalized" 15m candle (klines[-3])
+            # We skip klines[-2] because Binance API often lags for ~1 min after close.
+            finalized_vol = float(klines[-3][5]) 
+            prev_vols = [float(k[5]) for k in klines[:-3]] # 19 candles before the finalized one
             avg_vol = sum(prev_vols) / len(prev_vols) if prev_vols else 0
             
-            rvol = last_full_vol / avg_vol if avg_vol > 0 else 0
+            rvol = finalized_vol / avg_vol if avg_vol > 0 else 0
             
             return max(recent_highs), min(recent_lows), rvol
         else:
