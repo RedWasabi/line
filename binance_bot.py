@@ -229,17 +229,17 @@ def main():
     
     # Robust Hour-Boundary Reporting Logic
     # (Triggers on the first run of every new UTC hour)
-    now = time.time()
-    current_hour_epoch = int(now / 3600)
+    now = time.gmtime()
+    current_hour_epoch = int(time.time() / 3600)
     last_report_hour_epoch = int(metadata.get('last_report_time', 0) / 3600)
     should_send = current_hour_epoch > last_report_hour_epoch
     
     if should_send:
-        metadata['last_report_time'] = now
-        logger.info(f"Report Triggered: New hour detected ({time.strftime('%H:00', time.gmtime(now))} UTC).")
+        metadata['last_report_time'] = time.time()
+        logger.info(f"Report Triggered: New hour detected ({time.strftime('%H:00', now)} UTC).")
     else:
-        mins_until_next = 60 - time.gmtime(now).tm_min
-        logger.info(f"Monitoring: Hour {time.gmtime(now).tm_hour} in progress. Next report at top-of-hour (~{mins_until_next}m).")
+        mins_until_next = 60 - now.tm_min
+        logger.info(f"Monitoring: {now.tm_min}m past the hour. Next report at top-of-hour (~{mins_until_next}m).")
     
     # Global Increment: Initialize 'thc' if missing, then increment for all existing coins
     for symbol in state:
