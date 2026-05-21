@@ -227,16 +227,18 @@ def main():
     metadata = state_full.pop('_metadata', {"last_report_time": 0})
     state = state_full
     
-    # Absolute Time-based Reporting Check
-    now = time.time()
-    time_since_last = now - metadata.get('last_report_time', 0)
-    should_send = time_since_last >= REPORT_INTERVAL_SEC
+    # Tick-based Reporting Logic (1 tick = 15m, 4 ticks = 1h)
+    # Initialize tick counter if missing
+    metadata['report_tick_counter'] = metadata.get('report_tick_counter', 0) + 1
+    
+    # Trigger report every 4 ticks (exactly 1 hour)
+    should_send = metadata['report_tick_counter'] >= 4
     
     if should_send:
-        metadata['last_report_time'] = now
-        logger.info(f"Report Triggered: {time_since_last/60:.1f} minutes since last report.")
+        metadata['report_tick_counter'] = 0 # Reset counter
+        logger.info(f"Report Triggered: 4 ticks reached (1 hour cycle).")
     else:
-        logger.info(f"Monitoring: {time_since_last/60:.1f} minutes since last report. Waiting for trigger.")
+        logger.info(f"Monitoring: Tick {metadata['report_tick_counter']}/4. Waiting for hourly trigger.")
     
     # Global Increment: Initialize 'thc' if missing, then increment for all existing coins
     for symbol in state:
