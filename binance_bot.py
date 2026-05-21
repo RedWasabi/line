@@ -227,18 +227,16 @@ def main():
     metadata = state_full.pop('_metadata', {"last_report_time": 0})
     state = state_full
     
-    # Interval-based Reporting with Hour-Snapping
+    # Absolute Time-based Reporting Check
     now = time.time()
     time_since_last = now - metadata.get('last_report_time', 0)
     should_send = time_since_last >= REPORT_INTERVAL_SEC
     
     if should_send:
-        # Snap last_report_time to the start of the current hour (e.g., 8:05 -> 8:00)
-        # This aligns future intervals with the top of the hour.
-        metadata['last_report_time'] = (now // 3600) * 3600
-        logger.info(f"Report Triggered: {time_since_last/60:.1f}m since last. Snapping to hour boundary.")
+        metadata['last_report_time'] = now
+        logger.info(f"Report Triggered: {time_since_last/60:.1f} minutes since last report.")
     else:
-        logger.info(f"Monitoring: {time_since_last/60:.1f}m since last report. Waiting for {REPORT_INTERVAL_SEC/60:.0f}m mark.")
+        logger.info(f"Monitoring: {time_since_last/60:.1f} minutes since last report. Waiting for trigger.")
     
     # Global Increment: Initialize 'thc' if missing, then increment for all existing coins
     for symbol in state:
