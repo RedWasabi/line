@@ -121,19 +121,21 @@ def get_volume_stats(symbol, limit=21):
         response = requests.get(url, params=params)
         if response.status_code == 200:
             klines = response.json()
-            if not klines or len(klines) < 2:
+            if not klines or len(klines) < 3:
                 return None, None, 0.0
             
-            # High/Low from last 2 candles (intra-tick spikes)
+            # High/Low from last 2 candles (current + last closed) to catch intra-tick spikes
             recent_highs = [float(k[2]) for k in klines[-2:]]
             recent_lows = [float(k[3]) for k in klines[-2:]]
             
-            # RVol Calculation (Current 15m candle volume vs average of previous 20)
-            current_vol = float(klines[-1][5]) # Volume is index 5
-            prev_vols = [float(k[5]) for k in klines[:-1]]
+            # RVol Calculation: Use the last CLOSED 15m candle vs average of previous 19
+            # klines[-1] is the current (incomplete) candle.
+            # klines[-2] is the last full closed candle.
+            last_full_vol = float(klines[-2][5]) 
+            prev_vols = [float(k[5]) for k in klines[:-2]] # All candles before the last closed one
             avg_vol = sum(prev_vols) / len(prev_vols) if prev_vols else 0
             
-            rvol = current_vol / avg_vol if avg_vol > 0 else 0
+            rvol = last_full_vol / avg_vol if avg_vol > 0 else 0
             
             return max(recent_highs), min(recent_lows), rvol
         else:
