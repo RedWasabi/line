@@ -227,18 +227,19 @@ def main():
     metadata = state_full.pop('_metadata', {"last_report_time": 0})
     state = state_full
     
-    # Tick-based Reporting Logic (1 tick = 15m, 4 ticks = 1h)
-    # Initialize tick counter if missing
-    metadata['report_tick_counter'] = metadata.get('report_tick_counter', 0) + 1
-    
-    # Trigger report every 4 ticks (exactly 1 hour)
-    should_send = metadata['report_tick_counter'] >= 4
+    # Robust Hour-Boundary Reporting Logic
+    # (Triggers on the first run of every new UTC hour)
+    now = time.time()
+    current_hour_epoch = int(now / 3600)
+    last_report_hour_epoch = int(metadata.get('last_report_time', 0) / 3600)
+    should_send = current_hour_epoch > last_report_hour_epoch
     
     if should_send:
-        metadata['report_tick_counter'] = 0 # Reset counter
-        logger.info(f"Report Triggered: 4 ticks reached (1 hour cycle).")
+        metadata['last_report_time'] = now
+        logger.info(f"Report Triggered: New hour detected ({time.strftime('%H:00', time.gmtime(now))} UTC).")
     else:
-        logger.info(f"Monitoring: Tick {metadata['report_tick_counter']}/4. Waiting for hourly trigger.")
+        mins_until_next = 60 - time.gmtime(now).tm_min
+        logger.info(f"Monitoring: Hour {time.gmtime(now).tm_hour} in progress. Next report at top-of-hour (~{mins_until_next}m).")
     
     # Global Increment: Initialize 'thc' if missing, then increment for all existing coins
     for symbol in state:
