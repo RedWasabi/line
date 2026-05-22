@@ -25,7 +25,8 @@ BINANCE_TELEGRAM_CHAT_ID = os.environ.get("BINANCE_TELEGRAM_CHAT_ID")
 # Strategy Thresholds
 L2_RECOVERY_BOUNCE_PCT = 20.0  # 20% bounce from low moves L2 -> L1
 MIN_VOLUME_USD = 1_000_000    # $1M USD minimum daily volume
-DELIST_TICKS_LIMIT = 288      # 72 hours (288 * 15m ticks)
+DELIST_TICKS_LIMIT = 288      # 72 hours (288 * 15m ticks) for L2 recovery/dead-cat
+MAX_WATCHLIST_TICKS = 960     # 10 days (960 * 15m ticks) global limit
 REPORT_INTERVAL_SEC = 3300    # ~55 mins (ensures 1 report per hour even with jitter)
 
 # API Endpoints
@@ -344,6 +345,11 @@ def main():
         if symbol not in ticker_map:
             continue
             
+        # Global Timeout: Remove coins that have been on the list for over 10 days
+        if coin.get('thc', 0) >= MAX_WATCHLIST_TICKS:
+            logger.info(f"Delisted {symbol} due to 10-day global limit (thc: {coin.get('thc')})")
+            continue
+
         ticker = ticker_map[symbol]
         curr_price = float(ticker['lastPrice'])
         vol_usd = float(ticker['quoteVolume'])

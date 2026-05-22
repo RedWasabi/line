@@ -1,6 +1,6 @@
 # Project Status: Crypto Intelligence & Binance Watchlist Bot
 
-**Date:** Wednesday, May 20, 2026
+**Date:** Friday, May 22, 2026
 **Status:** ✅ Dual-Bot Architecture Hardened for Personal Use
 
 ## 🟢 Completed Tasks
@@ -26,6 +26,8 @@
     - **Unified Reporting Architecture (v3.8)**:
         - **5-List Structure**: Streamlined reports from 7 sections down to 5 (Surges, Gainer L1/L2, Loser L1/L2).
         - **Inline Sentiment Indicators**: Integrated 🧊 (Lost) and 💤 (Fading) emojis directly next to symbols to preserve vertical space without losing data.
+    - **Global Cleanup Algorithm (v3.9)**:
+        - **10-Day Timeout**: Automatically delists any coin that has been on the watchlist for more than 10 days (960 ticks) to prevent "Loser L1" bloat.
     - **Discovery Scope Expansion (v3.7)**:
         - **Top 30 Scan**: Increased surveillance range from Top 20 to Top 30 Gainers/Losers.
         - **Enhanced Breakout Detection**: Allows high-conviction (RVol > 3.5x) coins to be discovered deeper in the leaderboard.
