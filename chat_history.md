@@ -232,3 +232,54 @@
 - **Character Escaping:** Integrated `html.escape` to safely handle stray mathematical symbols or punctuation that could be mistaken for HTML tags, while preserving the intended formatting.
 - **Splitting Precision:** Upgraded the text splitter to ALWAYS check for tag rupture at every possible split point and added a "forced progress" safeguard to prevent infinite loops.
 - **UI Consistency:** Maintained the preferred `<blockquote>` style while ensuring perfect tag balance and delivery reliability across all paginated messages.
+
+**Date:** Saturday, May 23, 2026
+
+## 42. News Bot Hardening (v2.12)
+- **Logging Migration:** Replaced all `print` statements with the `logging` module for professional process tracking and easier debugging in cloud environments.
+- **Externalized Constants:** Moved news limits and model identifiers to constants for rapid recalibration without modifying core logic.
+
+## 43. Hacker News Integration (v2.13)
+- **Tech Signal Discovery:** Integrated the Algolia HN Search API to fetch high-signal technology news.
+- **Engagement Filtering:** Implemented `points` and `num_comments` filters to ensure only high-impact community-validated tech news is included in reports.
+
+## 44. Macro-Crypto Correlation Engine (v2.14)
+- **Intelligent Priority Tagging:** Implemented keyword-based filtering (e.g., Fed, Inflation, Liquidity) to surface and tag market-moving macro events.
+- **Cross-Source Analysis:** Enhanced the AI prompt to mandate "Causal Analysis," forcing the model to link 1st-order macro news to 2nd-order crypto liquidity shifts.
+- **Priority Sorting:** Restructured the report to present high-signal correlation analysis at the top for immediate executive insight.
+
+## 45. Binance Bot Structural Hardening (v3.4)
+- **Time-Based Gating:** Replaced tick-based reporting logic with `REPORT_INTERVAL_SEC` (Timestamp-based) to ensure report delivery remains consistent even if polling frequency changes.
+- **Audit Logging:** Implemented professional logging across all state transitions and API interactions.
+
+## 46. Dynamic Volatility & L2 Tracking (v3.5)
+- **Volume-Weighted Sensitivity:** Implemented dynamic drop thresholds (6%, 10%, 15%) based on 24h USD volume (Institutional, Healthy, Retail).
+- **Session Reference Data:** Updated L2 reports to track and display the **Starting Price (ST)** and **Net % Change** since discovery, providing context for "Dead Cat" bounces and recoveries.
+
+## 47. Volume Sentiment (RVol) Analysis (v3.6)
+- **Relative Volume Engine:** Implemented a 5-hour lookback algorithm to calculate RVol, allowing the bot to detect "Institutional Conviction" spikes.
+- **Sentiment Tagging:** Added automated tags for ⚡ Explosive, 🔥 Spiking, 📈 Growing, 💤 Fading, and 🧊 Lost interest based on volume behavior.
+
+## 48. Discovery Scope Expansion (v3.7)
+- **Surveillance Range:** Increased the leaderboard scan from Top 20 to Top 30 Gainers/Losers.
+- **Conviction-Based Discovery:** Updated the filter to allow high-conviction coins (RVol > 3.5x) to be added to the watchlist even if they are deep in the leaderboard.
+
+## 49. Unified Reporting & Global Cleanup (v3.8 - v3.9)
+- **Streamlined Architecture:** Reduced the report from 7 sections to a 5-list structure (Surges, Gainer L1/L2, Loser L1/L2) for better readability.
+- **10-Day Auto-Purge (v3.9):** Implemented a global `MAX_WATCHLIST_TICKS` (960 ticks) limit to automatically delist coins after 10 days, preventing list bloat and ensuring focus on fresh trends.
+
+## 50. Loser List Removal (v3.10)
+- **Strategic Focus:** Disabled the "Loser L1" and "Loser L2" lists from the Telegram reports to focus exclusively on momentum and recovery plays.
+- **Code Preservation:** Maintained the loser tracking logic in the source code (commented out) for potential future re-activation, ensuring a clean transition to a 3-list reporting structure.
+
+## 51. Context7 Uninstallation (v1.0.0)
+- **Clean Cleanup:** Successfully uninstalled the Context7 extension as requested.
+- **Configuration Purge:** Removed the `context7` MCP server entry and API key from `settings.json`.
+- **Filesystem Cleanup:** Deleted the entire extension directory (`C:\Users\K_cha\.gemini\extensions\context7`) and resolved lingering skill conflicts in the global skills folder.
+
+## 52. Public Repo Transition Readiness (Security Scan)
+- **Deep Security Audit:** Performed a comprehensive scan of the workspace to prepare for changing the repository from private to public.
+- **Credential Verification:** Confirmed that no hardcoded API keys or secrets exist in the source code. Verified that all sensitive variables are correctly loaded via `os.environ`.
+- **Exclusion Audit:** Confirmed that `.env` is properly ignored by Git and that the GitHub Action workflows use `${{ secrets.<NAME> }}` for all sensitive data.
+- **Pending Deployment:** Note that the **v3.10 changes** (Loser List Removal and reporting consolidation) are currently verified locally but **have not yet been pushed to GitHub**.
+

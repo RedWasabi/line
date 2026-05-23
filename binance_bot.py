@@ -304,32 +304,32 @@ def main():
                 }
                 logger.info(f"Added {symbol} to Gainer L1{' (Surge Discovery)' if is_surge else ''}")
 
-    for i, t in enumerate(top_losers):
-        symbol = t['symbol']
-        curr_price = float(t['lastPrice'])
-        
-        rvol = 0.0
-        is_surge = False
-        if symbol not in state:
-            _, _, rvol = get_volume_stats(symbol)
-            is_surge = rvol > 3.5
-
-        if symbol not in state or state[symbol]['layer'].startswith('gainer'):
-            if i < 10 or is_surge:
-                if symbol in state:
-                    logger.info(f"🔄 Reversal: Moving {symbol} from Gainer to Loser L1")
-                    
-                state[symbol] = {
-                    "layer": "loser_l1",
-                    "st": curr_price,
-                    "lp": curr_price,
-                    "hp": None,
-                    "hc": 0,
-                    "thc": 0,
-                    "rev": True if symbol in state else False,
-                    "rvol": rvol
-                }
-                logger.info(f"Added {symbol} to Loser L1{' (Surge Discovery)' if is_surge else ''}")
+    # for i, t in enumerate(top_losers):
+    #     symbol = t['symbol']
+    #     curr_price = float(t['lastPrice'])
+    #     
+    #     rvol = 0.0
+    #     is_surge = False
+    #     if symbol not in state:
+    #         _, _, rvol = get_volume_stats(symbol)
+    #         is_surge = rvol > 3.5
+    # 
+    #     if symbol not in state or state[symbol]['layer'].startswith('gainer'):
+    #         if i < 10 or is_surge:
+    #             if symbol in state:
+    #                 logger.info(f"🔄 Reversal: Moving {symbol} from Gainer to Loser L1")
+    #                 
+    #             state[symbol] = {
+    #                 "layer": "loser_l1",
+    #                 "st": curr_price,
+    #                 "lp": curr_price,
+    #                 "hp": None,
+    #                 "hc": 0,
+    #                 "thc": 0,
+    #                 "rev": True if symbol in state else False,
+    #                 "rvol": rvol
+    #             }
+    #             logger.info(f"Added {symbol} to Loser L1{' (Surge Discovery)' if is_surge else ''}")
 
     # 4. Process State Transitions & Collect Data for Reports
     new_state = {}
@@ -498,31 +498,31 @@ def main():
                         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
                         f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
                     )
-                elif layer_key == "loser_l1":
-                    lp_str = format_price(coin['lp'])
-                    dp = (coin['st'] - curr_price) / coin['st'] * 100
-                    bh = (curr_price - coin['lp']) / coin['lp'] * 100
-                    final_report_strings["loser_l1"].append(
-                        f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
-                        f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>{vol_sent_str}\n"
-                        f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
-                        f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                        f"  Time: {thc_str}"
-                    )
-                elif layer_key == "loser_l2":
-                    hp_str = format_price(coin['hp'])
-                    dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
-                    np = (coin['st'] - curr_price) / coin['st'] * 100
-                    rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
-                    final_report_strings["loser_l2"].append(
-                        f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
-                        f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
-                        f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>{vol_sent_str}\n"
-                        f"  Net: <b>{np:+.2f}%</b> | Drop: <b>{dropp:.2f}%</b>\n"
-                        f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
-                        f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
-                    )
+                # elif layer_key == "loser_l1":
+                #     lp_str = format_price(coin['lp'])
+                #     dp = (coin['st'] - curr_price) / coin['st'] * 100
+                #     bh = (curr_price - coin['lp']) / coin['lp'] * 100
+                #     final_report_strings["loser_l1"].append(
+                #         f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
+                #         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                #         f"  ST: <code>{st_str}</code> | LP: <code>{lp_str}</code>{vol_sent_str}\n"
+                #         f"  Dec: <b>{dp:.2f}%</b> | Bounce: <b>{bh:.2f}%</b>\n"
+                #         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                #         f"  Time: {thc_str}"
+                #     )
+                # elif layer_key == "loser_l2":
+                #     hp_str = format_price(coin['hp'])
+                #     dropp = (coin['hp'] - curr_price) / coin['hp'] * 100
+                #     np = (coin['st'] - curr_price) / coin['st'] * 100
+                #     rem_str = format_time(max(0, DELIST_TICKS_LIMIT - coin['hc']))
+                #     final_report_strings["loser_l2"].append(
+                #         f"<b>• {symbol}</b>{status_emoji}{rev_tag}\n"
+                #         f"  Price: <code>{p_str}</code> (24h: <b>{ch24:+.2f}%</b>)\n"
+                #         f"  ST: <code>{st_str}</code> | HP: <code>{hp_str}</code>{vol_sent_str}\n"
+                #         f"  Net: <b>{np:+.2f}%</b> | Drop: <b>{dropp:.2f}%</b>\n"
+                #         f"  Vol: {vol_zone} (<i>{format_usd(vol_usd)}</i>)\n"
+                #         f"  Time: {thc_str} | Delist in: <i>{rem_str}</i>"
+                #     )
                 elif layer_key == "surges":
                     final_report_strings["surges"].append(
                         f"<b>• {symbol}</b>{status_emoji} | {sent_tag} (<b>{rvol:.1f}x</b>)\n"
@@ -537,8 +537,8 @@ def main():
             ("🚀 <b>Volume Surge (High Interest)</b>", "surges"),
             ("🔥 <b>Gainer (L1 - Momentum)</b>", "gainer_l1"),
             ("🏥 <b>Gainer L2 (Recovery)</b>", "gainer_l2"),
-            ("🩸 <b>Loser (L1 - Bottoming)</b>", "loser_l1"),
-            ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
+            # ("🩸 <b>Loser (L1 - Bottoming)</b>", "loser_l1"),
+            # ("📉 <b>Loser L2 (Dead Cat)</b>", "loser_l2")
         ]
         
         first_section_msg = True

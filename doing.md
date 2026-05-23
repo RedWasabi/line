@@ -1,6 +1,6 @@
 # Project Status: Crypto Intelligence & Binance Watchlist Bot
 
-**Date:** Friday, May 22, 2026
+**Date:** Saturday, May 23, 2026
 **Status:** ✅ Dual-Bot Architecture Hardened for Personal Use
 
 ## 🟢 Completed Tasks
@@ -23,8 +23,8 @@
         - **Causal Analysis**: LLM prompt now mandates "Cross-Source Correlation"—linking macro events (1st-order) to crypto liquidity/adoption shifts (2nd-order).
         - **Priority Sorting**: High-signal news is presented first to ensure analytical focus on market-moving themes.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
-    - **Unified Reporting Architecture (v3.8)**:
-        - **5-List Structure**: Streamlined reports from 7 sections down to 5 (Surges, Gainer L1/L2, Loser L1/L2).
+    - **Unified Reporting Architecture (v3.10)**:
+        - **3-List Structure**: Streamlined reports from 5 sections down to 3 (Surges, Gainer L1/L2). Loser L1/L2 lists have been disabled but preserved in source code.
         - **Inline Sentiment Indicators**: Integrated 🧊 (Lost) and 💤 (Fading) emojis directly next to symbols to preserve vertical space without losing data.
     - **Global Cleanup Algorithm (v3.9)**:
         - **10-Day Timeout**: Automatically delists any coin that has been on the watchlist for more than 10 days (960 ticks) to prevent "Loser L1" bloat.
@@ -44,12 +44,12 @@
     - **15-Minute Precision (v3.0)**: Upgraded to fetch data every 15 minutes with Intra-tick Spike Detection.
     - **4-Layer State Machine**: L1 Momentum, L2 Recovery, L1 Bottoming, L2 Dead Cat.
     - **Ultimate Reversal (v2.2)**: 🔄 Trend Reversed detection.
-3.  **Infrastructure**:
-    - GitHub Gist for persistent state.
-    - `data-api.binance.vision` for regional bypass.
+3.  **Security & Maintenance**:
+    - **Public Repo Readiness**: Completed comprehensive workspace scan for hardcoded secrets. Confirmed 100% environment variable coverage for credentials.
+    - **Infrastructure**: GitHub Gist for persistent state. `data-api.binance.vision` for regional bypass.
 
-
-## 🟡 Ongoing Monitoring
+## 🟡 Ongoing Monitoring & Deployment
+- **v3.10 Deployment**: Binance Bot v3.10 changes (Loser List removal) are verified locally but **pending push to GitHub**.
 - **Reporting Intervals**: Verifying that `REPORT_INTERVAL_SEC` correctly gates Telegram notifications while maintaining 15-minute polling.
 
 ## 🚀 Future Ideas
