@@ -22,6 +22,14 @@
         - **Intelligent Filtering**: Implemented keyword-based priority tagging (e.g., Fed, Inflation, Liquidity) to surface high-impact macro news.
         - **Causal Analysis**: LLM prompt now mandates "Cross-Source Correlation"—linking macro events (1st-order) to crypto liquidity/adoption shifts (2nd-order).
         - **Priority Sorting**: High-signal news is presented first to ensure analytical focus on market-moving themes.
+    - **Institutional Feed Expansion (v2.15)**:
+        - **The Block (RSS)**: Added for institutional-grade deep research and crypto policy insights.
+        - **ZeroHedge (RSS)**: Integrated for macro-liquidity contrarian analysis and alternative financial signals.
+        - **BIS (RSS)**: Added Bank of International Settlements speeches to capture global central bank regulatory signaling.
+    - **Quantitative Intelligence Upgrade (v2.16)**:
+        - **DefiLlama Integration**: Implemented 24h Stablecoin Net Flow tracking to gauge market liquidity.
+        - **Whale Alert Integration**: Added real-time tracking of transactions >$500k to detect institutional conviction.
+        - **Quantitative-to-Qualitative Correlation**: Re-engineered the AI prompt to mandate cross-referencing news headlines against actual on-chain money movements.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
     - **Unified Reporting Architecture (v3.10)**:
         - **3-List Structure**: Streamlined reports from 5 sections down to 3 (Surges, Gainer L1/L2). Loser L1/L2 lists have been disabled but preserved in source code.

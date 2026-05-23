@@ -32,13 +32,76 @@ RSS_FEEDS = [
     "https://cointelegraph.com/rss",                                  
     "https://insights.glassnode.com/rss",                            
     "https://www.sec.gov/news/pressreleases.rss",                     
-    "https://search.cnbc.com/rs/search/combinedcms/view.xml?id=10000664" 
+    "https://search.cnbc.com/rs/search/combinedcms/view.xml?id=10000664",
+    "https://www.theblock.co/rss.xml",                                
+    "https://zerohedge.com/feed",                                     
+    "https://www.bis.org/speeches/index.rss"                         
 ]
 
 # Load environment variables
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+WHALE_ALERT_API_KEY = os.environ.get("WHALE_ALERT_API_KEY")
+
+def get_stablecoin_flow():
+    """Fetches 24h net flow of major stablecoins from DefiLlama (v2.16)."""
+    url = "https://stablecoins.llama.fi/stablecoins"
+    try:
+        logger.info("Fetching stablecoin flow from DefiLlama...")
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            pegged_assets = data.get("peggedAssets", [])
+            total_flow = 0
+            details = []
+            
+            # Track top 5 stables for context
+            for asset in pegged_assets[:5]:
+                name = asset.get("name")
+                circ = asset.get("circulating", {}).get("peggedUSD", 0)
+                prev = asset.get("circulatingPrevDay", {}).get("peggedUSD", 0)
+                flow = circ - prev
+                total_flow += flow
+                details.append(f"{name}: {'+' if flow >= 0 else ''}${flow/1e6:.1f}M")
+            
+            return {
+                "total_24h_flow_usd": total_flow,
+                "breakdown": ", ".join(details)
+            }
+    except Exception as e:
+        logger.error(f"Error fetching DefiLlama: {e}")
+    return None
+
+def get_whale_movements(limit=5):
+    """Fetches large whale transactions from Whale Alert API (Free Tier, v2.16)."""
+    if not WHALE_ALERT_API_KEY:
+        logger.warning("WHALE_ALERT_API_KEY not set. Skipping whale data.")
+        return None
+        
+    # Free tier: last 1 hour, min $500k
+    start_time = int(time.time()) - 3600
+    url = f"https://api.whale-alert.io/v1/transactions?api_key={WHALE_ALERT_API_KEY}&min_value=500000&start={start_time}"
+    
+    try:
+        logger.info("Fetching whale movements from Whale Alert...")
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            transactions = response.json().get("transactions", [])
+            moves = []
+            for tx in transactions[:limit]:
+                amount_usd = tx.get("amount_usd", 0)
+                blockchain = tx.get("blockchain", "N/A")
+                symbol = tx.get("symbol", "N/A").upper()
+                from_addr = tx.get("from", {}).get("owner_type", "unknown")
+                to_addr = tx.get("to", {}).get("owner_type", "unknown")
+                
+                # Format: $1.2M BTC (exchange -> wallet)
+                moves.append(f"${amount_usd/1e6:.1f}M {symbol} ({from_addr} -> {to_addr})")
+            return moves
+    except Exception as e:
+        logger.error(f"Error fetching Whale Alert: {e}")
+    return None
 
 def get_aggregated_news(urls, limit=LIMIT_PER_SOURCE):
     """Scrapes news from multiple RSS URLs with priority tagging for crypto impact (v2.14)."""
@@ -109,7 +172,7 @@ def get_hn_crypto_news(limit=LIMIT_PER_SOURCE):
     retry=retry_if_exception_type(Exception),
     before_sleep=lambda retry_state: logger.warning(f"API busy or error. Retrying in {retry_state.next_action.sleep} seconds... (Attempt {retry_state.attempt_number})")
 )
-def summarize_market_news(news_items):
+def summarize_market_news(news_items, quant_data=None):
     """Summarizes market-moving news using Groq with deep insight and modern HTML formatting."""
     if not GROQ_API_KEY:
         logger.error("Error: GROQ_API_KEY environment variable is not set.")
@@ -120,15 +183,16 @@ def summarize_market_news(news_items):
     prompt = (
         "You are an Elite Macro-Crypto Market Strategist. Analyze the following news items and produce a deep-insight report in THAI. "
         "Your goal is to connect news events to 'Liquidity & Money Flow' and interest rate expectations. "
-        "### CORE MISSION: CROSS-SOURCE CORRELATION\n"
-        "- Connect Macro data (Fed/Inflation) directly to Crypto Risk Appetite.\n"
-        "- Explain how 1st-order events (e.g., Fed Rates) lead to 2nd-order Crypto effects (e.g., Stablecoin minting, Whale behavior).\n"
-        "- Identify if multiple sources are pointing to the same liquidity shift.\n\n"
+        "### CORE MISSION: QUANTITATIVE CORRELATION\n"
+        "- Use the provided ON-CHAIN QUANT DATA to validate headlines.\n"
+        "- If news is Bullish but Stablecoin Flow is Negative, highlight this 'Strategic Paradox'.\n"
+        "- Explain how 1st-order events (e.g., Fed Rates) lead to 2nd-order Crypto effects (e.g., Stablecoin minting, Whale behavior).\n\n"
         "### REPORT STRUCTURE (MANDATORY):\n"
         "1. 📊 <b>สรุปภาวะตลาด (Executive Summary):</b>\n"
-        "   - One powerful paragraph synthesizing the overall market mood. You MUST correlate macro trends with current crypto price action.\n\n"
+        "   - One powerful paragraph synthesizing the overall market mood. You MUST correlate macro trends with the provided QUANT DATA.\n\n"
         "2. <b>[Category Name]</b>\n"
         "   - Use these categories: [📌 Macro & Fed], [🐋 On-Chain & Whales], [🏢 Institutional Activity], [⚖️ Regulation & Tech].\n"
+        "   - Integrate Quant Data directly into the [🐋 On-Chain & Whales] section.\n"
         "   - Format each news item as:\n"
         "     📰 <b>[Headline]</b>\n"
         "     <blockquote>[Deep analytical summary in Thai focusing on Macro-to-Crypto liquidity correlation]</blockquote>\n"
@@ -140,8 +204,19 @@ def summarize_market_news(news_items):
         "- Use <blockquote>...</blockquote> for the analytical summary text.\n"
         "- Use ONLY Telegram-compatible HTML tags: <b>, <i>, <code>, <blockquote>.\n"
         "- NEVER use <br>, <p>, or <div> tags.\n"
-        "--- NEWS DATA ---\n"
+        "--- ON-CHAIN QUANT DATA ---\n"
     )
+    
+    if quant_data:
+        if quant_data.get("stable_flow"):
+            flow = quant_data["stable_flow"]
+            prompt += f"STABLECOIN NET FLOW (24H): {'+' if flow['total_24h_flow_usd'] >= 0 else ''}${flow['total_24h_flow_usd']/1e6:.1f}M USD\n"
+            prompt += f"Breakdown: {flow['breakdown']}\n"
+        
+        if quant_data.get("whale_moves"):
+            prompt += "WHALE TRANSACTIONS (1H): " + ", ".join(quant_data["whale_moves"]) + "\n"
+    
+    prompt += "\n--- NEWS DATA ---\n"
     
     for item in news_items:
         prompt += f"Source: {item['source']}\nTitle: {item['title']}\nSummary: {item['summary']}\n\n"
@@ -259,7 +334,7 @@ def send_telegram_message(text):
     return success
 
 def main():
-    logger.info("Starting Crypto Intelligence Bot (v2.14 - Macro-Crypto Correlation Engine)...")
+    logger.info("Starting Crypto Intelligence Bot (v2.16 - Quantitative Intelligence Upgrade)...")
     
     # 1. Fetch RSS feeds
     news_items = get_aggregated_news(RSS_FEEDS, limit=LIMIT_PER_SOURCE)
@@ -269,6 +344,12 @@ def main():
     if hn_news:
         news_items.extend(hn_news)
         
+    # 3. Fetch Quantitative Data (v2.16)
+    quant_data = {
+        "stable_flow": get_stablecoin_flow(),
+        "whale_moves": get_whale_movements()
+    }
+        
     if not news_items:
         logger.warning("No news items retrieved. Exiting.")
         return
@@ -277,8 +358,8 @@ def main():
         logger.info(f"Clipping news items from {len(news_items)} to {MAX_TOTAL_NEWS}")
         news_items = news_items[:MAX_TOTAL_NEWS]
         
-    logger.info(f"Analyzing {len(news_items)} news items...")
-    summary_text = summarize_market_news(news_items)
+    logger.info(f"Analyzing {len(news_items)} news items with quant data...")
+    summary_text = summarize_market_news(news_items, quant_data=quant_data)
     
     if not summary_text:
         logger.error("Failed to generate report. Exiting.")
