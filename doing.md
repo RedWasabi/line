@@ -31,11 +31,13 @@
         - **Whale Alert Integration**: Added real-time tracking of transactions >$500k to detect institutional conviction.
         - **Quantitative-to-Qualitative Correlation**: Re-engineered the AI prompt to mandate cross-referencing news headlines against actual on-chain money movements.
 2.  **Binance Screening Bot (`binance_bot.py`)**:
+    - **L1 Delist Exemption (v3.11)**:
+        - Removed the 10-day global delisting limit for coins in the L1 (Momentum/Bottoming) layers to allow indefinite tracking of active trends.
     - **Unified Reporting Architecture (v3.10)**:
         - **3-List Structure**: Streamlined reports from 5 sections down to 3 (Surges, Gainer L1/L2). Loser L1/L2 lists have been disabled but preserved in source code.
         - **Inline Sentiment Indicators**: Integrated 🧊 (Lost) and 💤 (Fading) emojis directly next to symbols to preserve vertical space without losing data.
     - **Global Cleanup Algorithm (v3.9)**:
-        - **10-Day Timeout**: Automatically delists any coin that has been on the watchlist for more than 10 days (960 ticks) to prevent "Loser L1" bloat.
+        - **10-Day Timeout (Exempting L1)**: Automatically delists any coin that has been on the watchlist for more than 10 days (960 ticks) if it is in an L2 layer, to prevent bloat while keeping active L1 trends.
     - **Discovery Scope Expansion (v3.7)**:
         - **Top 30 Scan**: Increased surveillance range from Top 20 to Top 30 Gainers/Losers.
         - **Enhanced Breakout Detection**: Allows high-conviction (RVol > 3.5x) coins to be discovered deeper in the leaderboard.
@@ -57,7 +59,7 @@
     - **Infrastructure**: GitHub Gist for persistent state. `data-api.binance.vision` for regional bypass.
 
 ## 🟢 Deployment Status
-- **v3.10 Deployed**: Binance Bot v3.10 changes (Loser List removal) and Security Audit docs have been successfully pushed to GitHub.
+- **v3.11 Ready**: Binance Bot v3.11 changes (L1 exemption from 10-day delisting) are ready.
 
 ## 🟡 Ongoing Monitoring
 - **Reporting Intervals**: Verifying that `REPORT_INTERVAL_SEC` correctly gates Telegram notifications while maintaining 15-minute polling.

@@ -223,7 +223,7 @@ def get_volume_zone(vol_usd):
         return "🐟 <b>Retail</b>"
 
 def main():
-    logger.info("Starting Multi-Layer Binance Screening Bot (v3.4 - Structural Hardening)...")
+    logger.info("Starting Multi-Layer Binance Screening Bot (v3.11 - Exempt L1 from 10-day delist)...")
     
     # 1. Load existing state
     state_full = load_state()
@@ -345,8 +345,8 @@ def main():
         if symbol not in ticker_map:
             continue
             
-        # Global Timeout: Remove coins that have been on the list for over 10 days
-        if coin.get('thc', 0) >= MAX_WATCHLIST_TICKS:
+        # Global Timeout: Remove coins that have been on the list for over 10 days (L1 list is exempt)
+        if coin.get('thc', 0) >= MAX_WATCHLIST_TICKS and not coin['layer'].endswith('_l1'):
             logger.info(f"Delisted {symbol} due to 10-day global limit (thc: {coin.get('thc')})")
             continue
 
